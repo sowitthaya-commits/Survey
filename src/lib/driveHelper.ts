@@ -152,7 +152,7 @@ export async function uploadFileToDrive(
     // Return direct webContentLink (which is download link/embed Link) or webViewLink
     // The webContentLink allows direct image embedding in img tags
     // Direct embed link format: https://lh3.googleusercontent.com/d/{id} or drive.google.com/uc?id={id}
-    return `https://docs.google.com/uc?export=view&id=${fileId}`;
+    return `https://lh3.googleusercontent.com/d/${fileId}`;
   } catch (error) {
     console.error('Error uploading file to Google Drive:', error);
     // If google drive upload fails, fall back to local as fallback safety

@@ -214,7 +214,7 @@ function SurveyWizardForm() {
 
     (mapContainer as any)._mapInstance = map;
     (mapContainer as any)._markerInstance = marker;
-  }, [mapLoaded, currentStep]);
+  }, [mapLoaded, currentStep, loading]);
 
   // Synchronize Leaflet map and marker position when coordinates change (e.g. after draft loads)
   useEffect(() => {
@@ -2197,7 +2197,7 @@ function SurveyWizardForm() {
                           <div>
                             <div className="relative w-full h-36 border border-slate-200 bg-slate-100 rounded-lg overflow-hidden flex items-center justify-center">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={draw.annotatedImage} alt={`Drawing gallery thumbnail ${idx}`} className="object-cover w-full h-full" />
+                              <img src={formatDriveEmbedUrl(draw.annotatedImage)} alt={`Drawing gallery thumbnail ${idx}`} className="object-cover w-full h-full" />
                             </div>
                             <div className="mt-2 text-xs">
                               <p className="font-bold text-blue-900">{draw.roomName} <span className="text-slate-400 font-normal">| ขั้นตอนที่ {draw.step}</span></p>
@@ -2307,7 +2307,7 @@ function SurveyWizardForm() {
   function renderMultipleImagesSection(step: number, title: string, description?: string) {
     const isExisting = step === 1;
     const roomIdx = isExisting ? -1 : activeRoomIndex;
-    const imagesList = isExisting ? existingImages : ((rooms[roomIdx] || {}).images || []).filter(img => img.step === step);
+    const imagesList = isExisting ? existingImages : ((rooms[roomIdx] || {}).images || []).filter(img => Number(img.step) === Number(step));
 
     return (
       <div className="space-y-4">
@@ -2359,7 +2359,7 @@ function SurveyWizardForm() {
                 <div className="relative w-full h-40 rounded-lg overflow-hidden border border-slate-300 bg-slate-200 flex items-center justify-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={img.annotatedImage}
+                    src={formatDriveEmbedUrl(img.annotatedImage)}
                     alt="Site Survey Gallery item"
                     className="object-cover w-full h-full"
                   />
@@ -2402,6 +2402,17 @@ function SurveyWizardForm() {
     );
   }
 }
+
+const formatDriveEmbedUrl = (url: string): string => {
+  if (!url) return '';
+  if (url.includes('docs.google.com/uc?export=view&id=')) {
+    const match = url.match(/id=([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+      return `https://lh3.googleusercontent.com/d/${match[1]}`;
+    }
+  }
+  return url;
+};
 
 export default function SurveyWizardPage() {
   return (

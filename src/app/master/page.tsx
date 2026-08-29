@@ -45,7 +45,7 @@ const CATEGORY_MAP: Record<string, string> = {
 };
 
 export default function MasterDataPage() {
-  const [activeTab, setActiveTab] = useState<'sales' | 'displays' | 'options'>('sales');
+  const [activeTab, setActiveTab] = useState<'sales' | 'displays' | 'options'>('options');
   const [salesList, setSalesList] = useState<SalesPerson[]>([]);
   const [displayList, setDisplayList] = useState<DisplayModel[]>([]);
   const [optionsList, setOptionsList] = useState<DropdownOption[]>([]);
@@ -262,40 +262,7 @@ export default function MasterDataPage() {
       )}
 
       <div className="max-w-6xl mx-auto">
-        {/* Tab Switching */}
-        <div className="flex border-b border-slate-200 mb-8 bg-white p-1 rounded-xl shadow-sm max-w-lg">
-          <button
-            onClick={() => setActiveTab('sales')}
-            className={`flex-1 text-center py-2.5 rounded-lg font-semibold text-xs transition-all ${
-              activeTab === 'sales'
-                ? 'bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            รายชื่อพนักงานขาย
-          </button>
-          <button
-            onClick={() => setActiveTab('displays')}
-            className={`flex-1 text-center py-2.5 rounded-lg font-semibold text-xs transition-all ${
-              activeTab === 'displays'
-                ? 'bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            รุ่นจอภาพ (Display Models)
-          </button>
-          <button
-            onClick={() => setActiveTab('options')}
-            className={`flex-1 text-center py-2.5 rounded-lg font-semibold text-xs transition-all flex items-center justify-center gap-1 ${
-              activeTab === 'options'
-                ? 'bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            <Settings2 className="w-3.5 h-3.5" />
-            ตัวเลือก Dropdowns
-          </button>
-        </div>
+
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-500">
@@ -308,264 +275,57 @@ export default function MasterDataPage() {
             {/* Form Section */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm h-fit">
               <h2 className="text-lg font-bold mb-4 text-slate-900">
-                {activeTab === 'sales' && (editingSalesId ? 'แก้ไขพนักงานขาย' : 'เพิ่มพนักงานขาย')}
-                {activeTab === 'displays' && (editingModelId ? 'แก้ไขรุ่นจอภาพ' : 'เพิ่มรุ่นจอภาพ')}
-                {activeTab === 'options' && 'เพิ่มตัวเลือกดรอปดาวน์'}
+                เพิ่มตัวเลือกดรอปดาวน์
               </h2>
 
-              {activeTab === 'sales' && (
-                <form onSubmit={handleSalesSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-500 mb-1.5">
-                      ชื่อ-นามสกุล <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={salesName}
-                      onChange={(e) => setSalesName(e.target.value)}
-                      placeholder="เช่น สมชาย ใจดี"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4f46e5]/20 focus:border-[#4f46e5] transition text-sm"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-500 mb-1.5">อีเมล</label>
-                    <input
-                      type="email"
-                      value={salesEmail}
-                      onChange={(e) => setSalesEmail(e.target.value)}
-                      placeholder="เช่น somchai@company.com"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4f46e5]/20 focus:border-[#4f46e5] transition text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-500 mb-1.5">เบอร์โทรศัพท์</label>
-                    <input
-                      type="text"
-                      value={salesPhone}
-                      onChange={(e) => setSalesPhone(e.target.value)}
-                      placeholder="เช่น 081-234-5678"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4f46e5]/20 focus:border-[#4f46e5] transition text-sm"
-                    />
-                  </div>
-                  <div className="pt-2 flex gap-2">
-                    <button
-                      type="submit"
-                      className="flex-1 bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] hover:bg-gradient-to-r from-[#4338ca] to-[#6d28d9] text-white text-sm font-semibold py-2 px-4 rounded-lg flex items-center justify-center gap-1.5 transition"
-                    >
-                      {editingSalesId ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                      {editingSalesId ? 'บันทึกการแก้ไข' : 'เพิ่มรายชื่อ'}
-                    </button>
-                    {editingSalesId && (
-                      <button
-                        type="button"
-                        onClick={cancelEditSales}
-                        className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold py-2 px-3 rounded-lg transition"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </form>
-              )}
-
-              {activeTab === 'displays' && (
-                <form onSubmit={handleDisplaySubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-500 mb-1.5">
-                      ชื่อรุ่น (Model Name) <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={modelName}
-                      onChange={(e) => setModelName(e.target.value)}
-                      placeholder="เช่น QM55B, FW-65BZ30L"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4f46e5]/20 focus:border-[#4f46e5] transition text-sm"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-500 mb-1.5">
-                      ยี่ห้อ (Brand) <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={brand}
-                      onChange={(e) => setBrand(e.target.value)}
-                      placeholder="เช่น Samsung, Sony, LG"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4f46e5]/20 focus:border-[#4f46e5] transition text-sm"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-500 mb-1.5">รายละเอียดทางเทคนิค</label>
-                    <textarea
-                      value={specifications}
-                      onChange={(e) => setSpecifications(e.target.value)}
-                      placeholder="เช่น 55 นิ้ว 4K UHD, ความสว่าง 500 nits"
-                      rows={3}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4f46e5]/20 focus:border-[#4f46e5] transition text-sm resize-none"
-                    />
-                  </div>
-                  <div className="pt-2 flex gap-2">
-                    <button
-                      type="submit"
-                      className="flex-1 bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] hover:bg-gradient-to-r from-[#4338ca] to-[#6d28d9] text-white text-sm font-semibold py-2 px-4 rounded-lg flex items-center justify-center gap-1.5 transition"
-                    >
-                      {editingModelId ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                      {editingModelId ? 'บันทึกการแก้ไข' : 'เพิ่มข้อมูลจอ'}
-                    </button>
-                    {editingModelId && (
-                      <button
-                        type="button"
-                        onClick={cancelEditModel}
-                        className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold py-2 px-3 rounded-lg transition"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </form>
-              )}
-
-              {activeTab === 'options' && (
-                <form onSubmit={handleOptionSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-500 mb-1.5">
-                      กลุ่มดรอปดาวน์ (Dropdown Category) <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      value={optionCategory}
-                      onChange={(e) => setOptionCategory(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 text-sm"
-                    >
-                      {Object.entries(CATEGORY_MAP).map(([key, label]) => (
-                        <option key={key} value={key}>{label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-500 mb-1.5">
-                      ค่าแบรนด์/ข้อมูล (Value Option) <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={optionValue}
-                      onChange={(e) => setOptionValue(e.target.value)}
-                      placeholder="เช่น Bose, Crestron, Shure"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 text-sm"
-                      required
-                    />
-                  </div>
-                  <div className="pt-2">
-                    <button
-                      type="submit"
-                      className="w-full bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] hover:bg-gradient-to-r from-[#4338ca] to-[#6d28d9] text-white text-sm font-semibold py-2 px-4 rounded-lg flex items-center justify-center gap-1.5 transition"
-                    >
-                      <Plus className="w-4 h-4" />
-                      เพิ่มตัวเลือก
-                    </button>
-                  </div>
-                </form>
-              )}
+              <form onSubmit={handleOptionSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-500 mb-1.5">
+                    กลุ่มดรอปดาวน์ (Dropdown Category) <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={optionCategory}
+                    onChange={(e) => setOptionCategory(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 text-sm"
+                  >
+                    {Object.entries(CATEGORY_MAP).map(([key, label]) => (
+                      <option key={key} value={key}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-500 mb-1.5">
+                    ค่าแบรนด์/ข้อมูล (Value Option) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={optionValue}
+                    onChange={(e) => setOptionValue(e.target.value)}
+                    placeholder="เช่น Bose, Crestron, Shure"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 text-sm"
+                    required
+                  />
+                </div>
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] hover:bg-gradient-to-r from-[#4338ca] to-[#6d28d9] text-white text-sm font-semibold py-2 px-4 rounded-lg flex items-center justify-center gap-1.5 transition"
+                  >
+                    <Plus className="w-4 h-4" />
+                    เพิ่มตัวเลือก
+                  </button>
+                </div>
+              </form>
             </div>
 
             {/* List Table Section */}
             <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
               <h2 className="text-lg font-bold mb-4 text-slate-900 font-bold">
-                {activeTab === 'sales' && 'รายการพนักงานขายทั้งหมด'}
-                {activeTab === 'displays' && 'รายการรุ่นจอภาพทั้งหมด'}
-                {activeTab === 'options' && 'รายการตัวเลือกของระบบภาพและเสียง'}
+                รายการตัวเลือกของระบบภาพและเสียง
               </h2>
 
               <div className="overflow-x-auto">
-                {activeTab === 'sales' && (
-                  salesList.length === 0 ? (
-                    <p className="text-center py-10 text-slate-500 text-sm">ไม่มีข้อมูลพนักงานขาย</p>
-                  ) : (
-                    <table className="w-full text-left border-collapse text-sm">
-                      <thead>
-                        <tr className="border-b border-slate-150 bg-slate-50/50">
-                          <th className="py-3 px-4 font-semibold text-slate-600">ชื่อ</th>
-                          <th className="py-3 px-4 font-semibold text-slate-600">อีเมล</th>
-                          <th className="py-3 px-4 font-semibold text-slate-600">เบอร์โทร</th>
-                          <th className="py-3 px-4 font-semibold text-slate-600 text-right">การจัดการ</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {salesList.map((sp) => (
-                          <tr key={sp.id} className="border-b border-slate-100 hover:bg-slate-50/40 transition">
-                            <td className="py-3.5 px-4 font-medium text-slate-900">{sp.name}</td>
-                            <td className="py-3.5 px-4 text-slate-600">{sp.email || '-'}</td>
-                            <td className="py-3.5 px-4 text-slate-600">{sp.phone || '-'}</td>
-                            <td className="py-3.5 px-4 text-right flex justify-end gap-1.5">
-                              <button
-                                onClick={() => startEditSales(sp)}
-                                className="p-1.5 text-slate-500 hover:text-[#4f46e5] hover:bg-[#4f46e5]/10 rounded-lg transition"
-                                title="แก้ไข"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteSales(sp.id)}
-                                className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                                title="ลบ"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )
-                )}
-
-                {activeTab === 'displays' && (
-                  displayList.length === 0 ? (
-                    <p className="text-center py-10 text-slate-500 text-sm">ไม่มีข้อมูลรุ่นจอภาพ</p>
-                  ) : (
-                    <table className="w-full text-left border-collapse text-sm">
-                      <thead>
-                        <tr className="border-b border-slate-150 bg-slate-50/50">
-                          <th className="py-3 px-4 font-semibold text-slate-600">รุ่น (Model)</th>
-                          <th className="py-3 px-4 font-semibold text-slate-600">ยี่ห้อ (Brand)</th>
-                          <th className="py-3 px-4 font-semibold text-slate-600">รายละเอียด</th>
-                          <th className="py-3 px-4 font-semibold text-slate-600 text-right">การจัดการ</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {displayList.map((dm) => (
-                          <tr key={dm.id} className="border-b border-slate-100 hover:bg-slate-50/40 transition">
-                            <td className="py-3.5 px-4 font-medium text-slate-900">{dm.modelName}</td>
-                            <td className="py-3.5 px-4 text-slate-600">{dm.brand}</td>
-                            <td className="py-3.5 px-4 text-slate-600 max-w-xs truncate" title={dm.specifications || ''}>
-                              {dm.specifications || '-'}
-                            </td>
-                            <td className="py-3.5 px-4 text-right flex justify-end gap-1.5">
-                              <button
-                                onClick={() => startEditModel(dm)}
-                                className="p-1.5 text-slate-500 hover:text-[#4f46e5] hover:bg-[#4f46e5]/10 rounded-lg transition"
-                                title="แก้ไข"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteModel(dm.id)}
-                                className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                                title="ลบ"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )
-                )}
-
-                {activeTab === 'options' && (() => {
+                {(() => {
                   const filteredOptions = optionsList.filter(opt => opt.category === optionCategory);
                   const totalPages = Math.max(1, Math.ceil(filteredOptions.length / itemsPerPage));
                   const paginatedOptions = filteredOptions.slice((optionsPage - 1) * itemsPerPage, optionsPage * itemsPerPage);

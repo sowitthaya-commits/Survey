@@ -156,10 +156,42 @@ export async function POST(request: Request) {
     }
 
     // Google Docs Folder mapping: 1UkCIccul_XH6o1wQ7orjrJc0ozrBa-ws
-    const mockDocId = uuidv4().substring(0, 16);
-    // Directly target the folder via link (in real scripts, Apps Script places it there)
-    const docUrl = `https://docs.google.com/document/d/${mockDocId}/edit?usp=drivesdk`;
-    const pdfUrl = `/uploads/${id}/survey_report_${id.substring(0, 8)}.pdf`;
+    let docUrl = `https://docs.google.com/document/d/${uuidv4().substring(0, 16)}/edit?usp=drivesdk`;
+    let pdfUrl = `/uploads/${id}/survey_report_${id.substring(0, 8)}.pdf`;
+
+    const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
+    if (scriptUrl) {
+      try {
+        console.log('Requesting Google Apps Script Web App to create report...');
+        const response = await fetch(scriptUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'createReport',
+            projectName: surveyData.projectName,
+            customerName: surveyData.customerName,
+            budget: surveyData.budget,
+            salesPersonName: salesPersonName,
+            surveyDate: surveyData.surveyDate,
+            id: id
+          })
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            if (data.docUrl) docUrl = data.docUrl;
+            if (data.pdfUrl) pdfUrl = data.pdfUrl;
+            console.log('Apps Script report generated successfully:', { docUrl, pdfUrl });
+          } else {
+            console.warn('Apps Script report generation failed:', data.error);
+          }
+        } else {
+          console.warn(`Apps Script report HTTP error: ${response.status}`);
+        }
+      } catch (scriptErr) {
+        console.error('Failed calling Apps Script to create report:', scriptErr);
+      }
+    }
 
     try {
       const uploadDir = path.join(process.cwd(), 'public', 'uploads', id);

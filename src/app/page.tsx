@@ -502,7 +502,7 @@ export default function Dashboard() {
                           <div>
                             <div className="relative w-full h-28 border border-slate-200 bg-slate-100 rounded-lg overflow-hidden flex items-center justify-center">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={draw.annotatedImage} alt={`Drawing thumbnail ${idx}`} className="object-cover w-full h-full" />
+                              <img src={formatDriveEmbedUrl(draw.annotatedImage)} alt={`Drawing thumbnail ${idx}`} className="object-cover w-full h-full" />
                             </div>
                             <p className="font-bold text-blue-900 text-xs mt-1.5">{draw.roomName} <span className="text-slate-400 font-normal">| ขั้นที่ {draw.step}</span></p>
                             {draw.description && <p className="text-[11px] text-slate-500 mt-0.5">{draw.description}</p>}
@@ -572,6 +572,17 @@ export default function Dashboard() {
     }
   }
 }
+
+const formatDriveEmbedUrl = (url: string): string => {
+  if (!url) return '';
+  if (url.includes('docs.google.com/uc?export=view&id=')) {
+    const match = url.match(/id=([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+      return `https://lh3.googleusercontent.com/d/${match[1]}`;
+    }
+  }
+  return url;
+};
 
 function generateTextSummary(survey: any) {
   let text = '';
