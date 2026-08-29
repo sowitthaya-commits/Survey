@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { offlineDb } from '@/lib/offlineDb';
+import { uploadSurveyBase64Images } from '@/lib/uploadHelper';
 
 export function useOfflineSync() {
   const [isOnline, setIsOnline] = useState<boolean>(true);
@@ -66,12 +67,15 @@ export function useOfflineSync() {
 
       for (const survey of pendingSurveys) {
         try {
+          // Upload base64 images first to prevent 413 Payload Too Large
+          const preparedSurvey = await uploadSurveyBase64Images(survey);
+
           const response = await fetch('/api/surveys', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify(survey),
+            body: JSON.stringify(preparedSurvey),
           });
 
           if (response.ok) {

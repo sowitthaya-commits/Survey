@@ -125,8 +125,8 @@ function SurveyWizardForm() {
       name: 'ห้อง/จุดติดตั้งที่ 1',
       images: [],
       inputPorts: [
-        { id: uuidv4(), portType: 'HDMI', portQty: 0 },
-        { id: uuidv4(), portType: 'LAN', portQty: 0 }
+        { id: uuidv4(), portType: 'HDMI', portQty: '' as any },
+        { id: uuidv4(), portType: 'LAN', portQty: '' as any }
       ],
       visualOthersEnabled: {
         interactive: false,
@@ -346,8 +346,8 @@ function SurveyWizardForm() {
       name: `ห้อง/จุดติดตั้งที่ ${rooms.length + 1}`,
       images: [],
       inputPorts: [
-        { id: uuidv4(), portType: 'HDMI', portQty: 0 },
-        { id: uuidv4(), portType: 'LAN', portQty: 0 }
+        { id: uuidv4(), portType: 'HDMI', portQty: '' as any },
+        { id: uuidv4(), portType: 'LAN', portQty: '' as any }
       ],
       visualOthersEnabled: {
         interactive: false,
@@ -935,12 +935,7 @@ function SurveyWizardForm() {
 
               {/* Building/Entrance Photos */}
               <div className="pt-6 border-t border-slate-100 bg-[#4f46e5]/10/40 p-5 rounded-2xl space-y-4">
-                <h3 className="font-bold text-blue-900 text-sm flex items-center gap-1.5">
-                  <ImageIcon className="w-4.5 h-4.5" />
-                  รูปอาคาร / รูปหน้าห้อง
-                </h3>
-                <p className="text-xs text-slate-500">อัปโหลดหรือถ่ายรูปภายนอกอาคาร ทางเข้า หรือหน้าห้อง เพื่อการเข้าสำรวจหรือส่งของ</p>
-                {renderMultipleImagesSection(1)}
+                {renderMultipleImagesSection(1, "รูปอาคาร / รูปหน้าห้อง", "อัปโหลดหรือถ่ายรูปภายนอกอาคาร ทางเข้า หรือหน้าห้อง เพื่อการเข้าสำรวจหรือส่งของ")}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
@@ -1036,16 +1031,7 @@ function SurveyWizardForm() {
                       className="w-full px-3 py-2 border border-slate-250 rounded-lg text-xs"
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">ประเภทของห้อง</label>
-                    <input
-                      type="text"
-                      value={currentRoom.roomType || ''}
-                      onChange={(e) => updateRoomField(activeRoomIndex, 'roomType', e.target.value)}
-                      placeholder="เช่น Boardroom, Huddle Space"
-                      className="w-full px-3 py-2 border border-slate-250 rounded-lg text-xs"
-                    />
-                  </div>
+
                   <div>
                     <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">ชั้น (Floor)</label>
                     <input
@@ -1225,8 +1211,7 @@ function SurveyWizardForm() {
 
               {/* Gallery Multi images */}
               <div className="mt-6 pt-4 border-t border-slate-100">
-                <h3 className="font-bold text-slate-800 text-sm mb-3">รูปภาพโครงสร้างห้องจุดที่จะติดตั้ง (อัปโหลดได้หลายภาพ)</h3>
-                {renderMultipleImagesSection(2)}
+                {renderMultipleImagesSection(2, "รูปภาพโครงสร้างห้องจุดที่จะติดตั้ง (อัปโหลดได้หลายภาพ)")}
               </div>
             </div>
           )}
@@ -1247,7 +1232,7 @@ function SurveyWizardForm() {
               <div className="space-y-6">
                 <div className="border border-slate-150 rounded-xl p-4 bg-[#4f46e5]/10/10 space-y-4">
                   <span className="block text-xs font-bold text-blue-900 uppercase">จอหลัก (LED Display Specs) สำหรับ {currentRoom.name}</span>
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-xs text-slate-600 mb-1">ขนาดกว้าง (เมตร)</label>
                       <input
@@ -1278,14 +1263,6 @@ function SurveyWizardForm() {
                         onChange={(e) => updateRoomField(activeRoomIndex, 'ledPixelPitch', e.target.value)}
                         placeholder="เช่น P1.86"
                         className="w-full px-3 py-1.5 border border-slate-250 rounded-lg text-xs"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-slate-600 mb-1">ยี่ห้อจอหลัก</label>
-                      <BrandSelector
-                        value={currentRoom.ledModelName || ''}
-                        setValue={(v) => updateRoomField(activeRoomIndex, 'ledModelName', v)}
-                        brandOptions={getOptionsForCategory('led_brand', ['Horion', 'Dahua'])}
                       />
                     </div>
                   </div>
@@ -1568,8 +1545,7 @@ function SurveyWizardForm() {
 
               {/* Gallery Multi images */}
               <div className="mt-6 pt-4 border-t border-slate-100">
-                <h3 className="font-bold text-slate-800 text-sm mb-3">รูปภาพจุดติดตั้งจอหลักและทิศทางสาย (อัปโหลดได้หลายรูป)</h3>
-                {renderMultipleImagesSection(3)}
+                {renderMultipleImagesSection(3, "รูปภาพจุดติดตั้งจอหลักและทิศทางสาย (อัปโหลดได้หลายรูป)")}
               </div>
             </div>
           )}
@@ -1779,8 +1755,7 @@ function SurveyWizardForm() {
 
               {/* Gallery Multi images */}
               <div className="mt-6 pt-4 border-t border-slate-100">
-                <h3 className="font-bold text-slate-800 text-sm mb-3">รูปภาพจุดติดตั้งกล้อง/จุดกระจายลำโพง (Audio Photo)</h3>
-                {renderMultipleImagesSection(4)}
+                {renderMultipleImagesSection(4, "รูปภาพจุดติดตั้งกล้อง/จุดกระจายลำโพง (Audio Photo)")}
               </div>
             </div>
           )}
@@ -1924,8 +1899,7 @@ function SurveyWizardForm() {
 
               {/* Gallery Multi images */}
               <div className="mt-6 pt-4 border-t border-slate-100">
-                <h3 className="font-bold text-slate-800 text-sm mb-3">รูปภาพจุดวางชุดควบคุม/แผงสวิตช์ไฟฟ้า (Control Detail Photo)</h3>
-                {renderMultipleImagesSection(5)}
+                {renderMultipleImagesSection(5, "รูปภาพจุดวางชุดควบคุม/แผงสวิตช์ไฟฟ้า (Control Detail Photo)")}
               </div>
             </div>
           )}
@@ -2273,38 +2247,51 @@ function SurveyWizardForm() {
   );
 
   // Gallery Multiple Images Section Helper (Fixed step parameter mismatch)
-  function renderMultipleImagesSection(step: number) {
+  function renderMultipleImagesSection(step: number, title: string, description?: string) {
     const isExisting = step === 1;
     const roomIdx = isExisting ? -1 : activeRoomIndex;
     const imagesList = isExisting ? existingImages : ((rooms[roomIdx] || {}).images || []).filter(img => img.step === step);
 
     return (
       <div className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="border-2 border-dashed border-slate-300 rounded-2xl py-6 px-4 flex flex-col items-center justify-center hover:bg-slate-50/50 hover:border-slate-400 transition cursor-pointer relative">
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={(e) => handleMultipleImageUpload(e, roomIdx, step)}
-              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-            />
-            <ImageIcon className="w-5 h-5 text-slate-500 mb-1" />
-            <span className="text-xs font-bold text-slate-700">อัปโหลดรูปภาพที่มีอยู่ในเครื่อง</span>
-            <span className="text-[10px] text-slate-400 mt-0.5 font-medium">กดเลือกรูปภาพจากโฟลเดอร์ภาพ</span>
+        {/* Compact header with action buttons on the right */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 pb-3 border-b border-slate-100 mb-2">
+          <div>
+            <h3 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+              <ImageIcon className="w-4 h-4 text-blue-500" />
+              {title}
+            </h3>
+            {description && (
+              <p className="text-[10px] text-slate-400 mt-0.5 font-medium">{description}</p>
+            )}
           </div>
+          
+          <div className="flex flex-wrap gap-2 w-full md:w-auto">
+            {/* Upload Button */}
+            <div className="relative px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-250 text-slate-700 text-xs font-bold rounded-lg flex items-center justify-center gap-1 transition cursor-pointer shadow-2xs">
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => handleMultipleImageUpload(e, roomIdx, step)}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+              />
+              <Download className="w-3.5 h-3.5" />
+              อัปโหลดรูปภาพ
+            </div>
 
-          <div className="border-2 border-dashed border-slate-300 rounded-2xl py-6 px-4 flex flex-col items-center justify-center hover:bg-slate-50/50 hover:border-slate-400 transition cursor-pointer relative">
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={(e) => handleMultipleImageUpload(e, roomIdx, step)}
-              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-            />
-            <Camera className="w-5 h-5 text-slate-500 mb-1" />
-            <span className="text-xs font-bold text-slate-700">ถ่ายภาพด้วยกล้องสดทันที</span>
-            <span className="text-[10px] text-slate-400 mt-0.5 font-medium">เปิดใช้งานกล้องของมือถือ/แท็บเล็ต</span>
+            {/* Take Photo Button */}
+            <div className="relative px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-250 text-slate-700 text-xs font-bold rounded-lg flex items-center justify-center gap-1 transition cursor-pointer shadow-2xs">
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={(e) => handleMultipleImageUpload(e, roomIdx, step)}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+              />
+              <Camera className="w-3.5 h-3.5" />
+              ถ่ายภาพ
+            </div>
           </div>
         </div>
 

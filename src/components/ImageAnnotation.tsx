@@ -177,6 +177,9 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
     let clientX = 0, clientY = 0;
     if ('touches' in e) {
       if (e.touches.length === 2) {
+        if (e.cancelable) {
+          e.preventDefault();
+        }
         setIsPinching(true);
         setIsDrawing(false);
         setIsPanning(false);
@@ -199,6 +202,9 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
     }
 
     if (tool === 'pan') {
+      if (e.cancelable) {
+        e.preventDefault();
+      }
       setIsPanning(true);
       setStartPanPos({ x: clientX, y: clientY });
       setInitialPan(pan);
@@ -236,6 +242,9 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
     let clientX = 0, clientY = 0;
     if ('touches' in e) {
       if (e.touches.length === 2 && isPinching) {
+        if (e.cancelable) {
+          e.preventDefault();
+        }
         // Pinch zooming with 2 fingers
         const dist = getTouchDistance(e.touches[0], e.touches[1]);
         const scaleMultiplier = dist / initialDistance;
@@ -259,6 +268,9 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
     }
 
     if (isPanning) {
+      if (e.cancelable) {
+        e.preventDefault();
+      }
       const dx = clientX - startPanPos.x;
       const dy = clientY - startPanPos.y;
       setPan({ x: initialPan.x + dx, y: initialPan.y + dy });
