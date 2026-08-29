@@ -1890,29 +1890,29 @@ function SurveyWizardForm() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-655 mb-1">การเตรียมไอพีแอดเดรส (IP Allocation)</label>
+                      <label className="block text-xs font-semibold text-slate-655 mb-1">ลักษณะการเชื่อมต่อ</label>
                       <select
                         value={currentRoom.networkIPRequirement || ''}
                         onChange={(e) => updateRoomField(activeRoomIndex, 'networkIPRequirement', e.target.value)}
                         className="w-full px-3 py-2 border border-slate-200 bg-white rounded-lg text-xs font-semibold"
                       >
                         <option value="">-- เลือก --</option>
-                        <option value="DHCP (Auto IP)">DHCP (รับไอพีอัตโนมัติ)</option>
-                        <option value="Static IP (ระบุพิกัด)">Static IP (ล็อกไอพี ฟิกซ์เฉพาะ)</option>
-                        <option value="ไม่ต้องใช้ IP">ไม่ต้องใช้ IP</option>
+                        <option value="เชื่อมต่อ internet">เชื่อมต่อ internet</option>
+                        <option value="ไม่เชื่อมต่อ internet">ไม่เชื่อมต่อ internet</option>
                       </select>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-655 mb-1">ผู้จัดเตรียมระบบเครือข่ายหลัก</label>
+                      <label className="block text-xs font-semibold text-slate-655 mb-1">การจัดเตรียมเครือข่าย</label>
                       <select
                         value={currentRoom.networkResponsibility || ''}
                         onChange={(e) => updateRoomField(activeRoomIndex, 'networkResponsibility', e.target.value)}
                         className="w-full px-3 py-2 border border-slate-200 bg-white rounded-lg text-xs font-semibold"
                       >
                         <option value="">-- เลือก --</option>
-                        <option value="ลูกค้าเตรียมให้">ลูกค้าเตรียมระบบแลน/เน็ตและหัวสายแลนให้</option>
-                        <option value="SWS จัดเตรียมให้">SWS จัดเตรียม (Switch/Access Point/ขยายเน็ต)</option>
+                        <option value="Switch">Switch</option>
+                        <option value="Access point">Access point</option>
+                        <option value="Switch/Access point">Switch/Access point</option>
                       </select>
                     </div>
                   </div>
