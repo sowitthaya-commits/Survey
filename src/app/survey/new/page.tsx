@@ -146,9 +146,10 @@ function SurveyWizardForm() {
   const [annotatingImageSrc, setAnnotatingImageSrc] = useState<string | null>(null);
 
   // Helper to extract options dynamically from dbOptions cache, falling back to defaults
-  const getOptionsForCategory = (category: string, defaultList: string[]) => {
+  const getOptionsForCategory = (category: string, defaultList: string[], includeOther: boolean = true) => {
     const filtered = dbOptions.filter(o => o.category === category).map(o => o.value);
-    return filtered.length > 0 ? [...filtered, 'อื่นๆ'] : [...defaultList, 'อื่นๆ'];
+    const list = filtered.length > 0 ? filtered : defaultList;
+    return includeOther ? [...list, 'อื่นๆ'] : list;
   };
 
   // Load Leaflet dynamically
@@ -1079,9 +1080,9 @@ function SurveyWizardForm() {
                         className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-lg text-xs font-semibold"
                       >
                         <option value="">-- เลือก --</option>
-                        <option value="ติดผนัง">ติดผนัง</option>
-                        <option value="ตั้งจากพื้น">ตั้งจากพื้น</option>
-                        <option value="แขวนจากเพดาน">แขวนจากเพดาน</option>
+                        {getOptionsForCategory('installation_type', ['ติดผนัง', 'ตั้งจากพื้น', 'แขวนจากเพดาน'], false).map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -1092,9 +1093,9 @@ function SurveyWizardForm() {
                         className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-lg text-xs font-semibold"
                       >
                         <option value="">-- เลือก --</option>
-                        <option value="ผนังปูน">ผนังปูน</option>
-                        <option value="ผนังเบา">ผนังเบา</option>
-                        <option value="ผนัง built-in">ผนัง built-in</option>
+                        {getOptionsForCategory('surface_type', ['ผนังปูน', 'ผนังเบา', 'ผนัง built-in'], false).map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -1105,8 +1106,9 @@ function SurveyWizardForm() {
                         className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-lg text-xs font-semibold"
                       >
                         <option value="">-- เลือก --</option>
-                        <option value="SWS จัดเตรียม">SWS จัดเตรียม</option>
-                        <option value="ลูกค้าจัดเตรียม">ลูกค้าจัดเตรียม</option>
+                        {getOptionsForCategory('responsibility', ['SWS จัดเตรียม', 'ลูกค้าจัดเตรียม'], false).map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -1120,8 +1122,9 @@ function SurveyWizardForm() {
                         className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-lg text-xs font-semibold"
                       >
                         <option value="">-- เลือก --</option>
-                        <option value="SWS จัดเตรียม">SWS จัดเตรียม</option>
-                        <option value="ลูกค้าจัดเตรียม">ลูกค้าจัดเตรียม</option>
+                        {getOptionsForCategory('responsibility', ['SWS จัดเตรียม', 'ลูกค้าจัดเตรียม'], false).map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -1132,8 +1135,9 @@ function SurveyWizardForm() {
                         className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-lg text-xs font-semibold"
                       >
                         <option value="">-- เลือก --</option>
-                        <option value="SWS จัดเตรียม">SWS จัดเตรียม</option>
-                        <option value="ลูกค้าจัดเตรียม">ลูกค้าจัดเตรียม</option>
+                        {getOptionsForCategory('responsibility', ['SWS จัดเตรียม', 'ลูกค้าจัดเตรียม'], false).map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -1162,8 +1166,9 @@ function SurveyWizardForm() {
                         className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-lg text-xs font-semibold"
                       >
                         <option value="">-- เลือก --</option>
-                        <option value="ห้องควบคุม">ห้องควบคุม</option>
-                        <option value="ภายในห้องประชุม">ภายในห้องประชุม</option>
+                        {getOptionsForCategory('rack_location', ['ห้องควบคุม', 'ภายในห้องประชุม'], false).map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -1174,8 +1179,9 @@ function SurveyWizardForm() {
                         className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-lg text-xs font-semibold"
                       >
                         <option value="">-- เลือก --</option>
-                        <option value="SWS จัดเตรียม">SWS จัดเตรียม</option>
-                        <option value="ลูกค้าจัดเตรียม">ลูกค้าจัดเตรียม</option>
+                        {getOptionsForCategory('responsibility', ['SWS จัดเตรียม', 'ลูกค้าจัดเตรียม'], false).map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -1186,8 +1192,9 @@ function SurveyWizardForm() {
                         className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-lg text-xs font-semibold"
                       >
                         <option value="">-- เลือก --</option>
-                        <option value="SWS จัดเตรียม">SWS จัดเตรียม</option>
-                        <option value="ลูกค้าจัดเตรียม">ลูกค้าจัดเตรียม</option>
+                        {getOptionsForCategory('responsibility', ['SWS จัดเตรียม', 'ลูกค้าจัดเตรียม'], false).map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -1201,8 +1208,9 @@ function SurveyWizardForm() {
                         className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-lg text-xs font-semibold"
                       >
                         <option value="">-- เลือก --</option>
-                        <option value="เดินราง">เดินราง</option>
-                        <option value="เดินฝัง">เดินฝัง</option>
+                        {getOptionsForCategory('wall_plate_wiring', ['เดินราง', 'เดินฝัง'], false).map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -1213,9 +1221,9 @@ function SurveyWizardForm() {
                         className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-lg text-xs font-semibold"
                       >
                         <option value="">-- เลือก --</option>
-                        <option value="HDMI Wall Plate">HDMI Wall Plate</option>
-                        <option value="LAN Wall Plate - Extender">LAN Wall Plate - Extender</option>
-                        <option value="LAN Wall Plate - HDBaseT">LAN Wall Plate - HDBaseT</option>
+                        {getOptionsForCategory('wall_plate_type', ['HDMI Wall Plate', 'LAN Wall Plate - Extender', 'LAN Wall Plate - HDBaseT'], false).map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -1299,9 +1307,9 @@ function SurveyWizardForm() {
                         className="w-full px-3 py-1.5 border border-slate-200 bg-white rounded-lg text-xs font-semibold"
                       >
                         <option value="">-- เลือกรูปทรง --</option>
-                        <option value="Flat">Flat</option>
-                        <option value="Flat curve">Flat curve</option>
-                        <option value="Real curve">Real curve</option>
+                        {getOptionsForCategory('led_type', ['Flat', 'Flat curve', 'Real curve'], false).map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -1312,9 +1320,9 @@ function SurveyWizardForm() {
                         className="w-full px-3 py-1.5 border border-slate-200 bg-white rounded-lg text-xs font-semibold"
                       >
                         <option value="">-- เลือกเทคโนโลยี --</option>
-                        <option value="SMD">SMD</option>
-                        <option value="GOB">GOB</option>
-                        <option value="COB">COB</option>
+                        {getOptionsForCategory('led_substrate', ['SMD', 'GOB', 'COB'], false).map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -1323,7 +1331,7 @@ function SurveyWizardForm() {
                         value={
                           !currentRoom.ledApplication
                             ? ''
-                            : ['ห้องประชุม', 'โฆษณา'].includes(currentRoom.ledApplication)
+                            : getOptionsForCategory('led_application', ['ห้องประชุม', 'โฆษณา'], false).includes(currentRoom.ledApplication)
                             ? currentRoom.ledApplication
                             : 'อื่นๆ'
                         }
@@ -1338,13 +1346,13 @@ function SurveyWizardForm() {
                         className="w-full px-3 py-1.5 border border-slate-200 bg-white rounded-lg text-xs font-semibold"
                       >
                         <option value="">-- เลือกการใช้งาน --</option>
-                        <option value="ห้องประชุม">ห้องประชุม</option>
-                        <option value="โฆษณา">โฆษณา</option>
-                        <option value="อื่นๆ">อื่นๆ</option>
+                        {getOptionsForCategory('led_application', ['ห้องประชุม', 'โฆษณา'], true).map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
                       </select>
 
                       {currentRoom.ledApplication &&
-                        !['ห้องประชุม', 'โฆษณา'].includes(currentRoom.ledApplication) && (
+                        !getOptionsForCategory('led_application', ['ห้องประชุม', 'โฆษณา'], false).includes(currentRoom.ledApplication) && (
                           <input
                             type="text"
                             value={
@@ -1458,8 +1466,9 @@ function SurveyWizardForm() {
                           className="px-3 py-1.5 border border-slate-200 bg-white rounded text-xs"
                         >
                           <option value="">ประเภทจอ</option>
-                          <option value="จอ LED">จอ LED</option>
-                          <option value="จอ TV">จอ TV</option>
+                          {getOptionsForCategory('side_display_type', ['จอ LED', 'จอ TV'], false).map(opt => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
                         </select>
                         <input
                           type="number"
@@ -1474,8 +1483,9 @@ function SurveyWizardForm() {
                           className="px-3 py-1.5 border border-slate-200 bg-white rounded text-xs"
                         >
                           <option value="">รูปแบบภาพแสดงผล</option>
-                          <option value="ต้องการภาพต่างกับจอหลัก">แสดงภาพต่างกับจอหลัก</option>
-                          <option value="ภาพเหมือนจอหลัก">ภาพเหมือนจอหลัก</option>
+                          {getOptionsForCategory('side_display_diff_image', ['ต้องการภาพต่างกับจอหลัก', 'ภาพเหมือนจอหลัก'], false).map(opt => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
                         </select>
                       </div>
                     </div>
@@ -1499,8 +1509,9 @@ function SurveyWizardForm() {
                           className="px-3 py-1.5 border border-slate-200 bg-white rounded text-xs font-semibold"
                         >
                           <option value="">ระบบ Tracking</option>
-                          <option value="ต้องการระบบ Tracking">ต้องการระบบ Auto-Tracking</option>
-                          <option value="ไม่ต้องการระบบ Tracking">ไม่ต้องการ</option>
+                          {getOptionsForCategory('ptz_tracking', ['ต้องการระบบ Tracking', 'ไม่ต้องการระบบ Tracking'], false).map(opt => (
+                            <option key={opt} value={opt === 'ต้องการระบบ Tracking' ? 'ต้องการระบบ Auto-Tracking' : 'ไม่ต้องการ'}>{opt}</option>
+                          ))}
                         </select>
                         <BrandSelector
                           value={currentRoom.ptzBrand || ''}
@@ -1684,9 +1695,9 @@ function SurveyWizardForm() {
                       className="w-full px-3 py-2 border border-slate-200 bg-white rounded-lg text-xs font-semibold"
                     >
                       <option value="">-- เลือกรูปแบบลำโพง --</option>
-                      <option value="ตู้ลำโพงหน้า">ตู้ลำโพงหน้า (Front speakers)</option>
-                      <option value="ลำโพงติดเพดาน">ลำโพงติดเพดาน (Ceiling speakers)</option>
-                      <option value="ลำโพงคู่หน้า+ลำโพงเพดาน">ลำโพงคู่หน้า + ลำโพงเพดาน (ห้องลึก &gt; 15 เมตร)</option>
+                      {getOptionsForCategory('speaker_type', ['ตู้ลำโพงหน้า', 'ลำโพงติดเพดาน', 'ลำโพงคู่หน้า+ลำโพงเพดาน'], false).map(opt => (
+                        <option key={opt} value={opt}>{opt === 'ตู้ลำโพงหน้า' ? 'ตู้ลำโพงหน้า (Front speakers)' : opt === 'ลำโพงติดเพดาน' ? 'ลำโพงติดเพดาน (Ceiling speakers)' : opt === 'ลำโพงคู่หน้า+ลำโพงเพดาน' ? 'ลำโพงคู่หน้า + ลำโพงเพดาน (ห้องลึก > 15 เมตร)' : opt}</option>
+                      ))}
                     </select>
                     <BrandSelector
                       value={currentRoom.speakerBrand || ''}
@@ -1714,8 +1725,9 @@ function SurveyWizardForm() {
                           className="w-full px-2 py-1 border border-slate-200 bg-white rounded text-xs font-semibold"
                         >
                           <option value="">เลือก</option>
-                          <option value="BYOD">BYOD</option>
-                          <option value="BYOM">BYOM</option>
+                          {getOptionsForCategory('byod_type', ['BYOD', 'BYOM'], false).map(opt => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
                         </select>
                       </div>
                       <div>
@@ -1772,8 +1784,9 @@ function SurveyWizardForm() {
                         className="w-full px-3 py-2 border border-slate-200 bg-white rounded-lg text-xs font-semibold"
                       >
                         <option value="">-- เลือกระบบเชื่อมต่อ --</option>
-                        <option value="แบบมีสาย">มีสาย (Wired)</option>
-                        <option value="แบบไร้สาย">ไร้สาย (Wireless)</option>
+                        {getOptionsForCategory('tabletop_type', ['แบบมีสาย', 'แบบไร้สาย'], false).map(opt => (
+                          <option key={opt} value={opt}>{opt === 'แบบมีสาย' ? 'มีสาย (Wired)' : opt === 'แบบไร้สาย' ? 'ไร้สาย (Wireless)' : opt}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -1844,8 +1857,9 @@ function SurveyWizardForm() {
                         className="w-full px-3 py-2 border border-slate-200 bg-white rounded-lg text-xs font-semibold"
                       >
                         <option value="">-- เลือก --</option>
-                        <option value="ภาพ">ภาพอย่างเดียว (Video Control)</option>
-                        <option value="ภาพ+เสียง">ภาพ + เสียง (AV Control)</option>
+                        {getOptionsForCategory('control_type', ['ภาพ', 'ภาพ+เสียง'], false).map(opt => (
+                          <option key={opt} value={opt}>{opt === 'ภาพ' ? 'ภาพอย่างเดียว (Video Control)' : opt === 'ภาพ+เสียง' ? 'ภาพ + เสียง (AV Control)' : opt}</option>
+                        ))}
                       </select>
                     </div>
 
@@ -1857,9 +1871,9 @@ function SurveyWizardForm() {
                         className="w-full px-3 py-2 border border-slate-200 bg-white rounded-lg text-xs font-semibold"
                       >
                         <option value="">-- เลือก --</option>
-                        <option value="ควบคุมผ่านปุ่มกด">ควบคุมผ่านปุ่มกด (Keypad)</option>
-                        <option value="ควบคุมผ่าน Touch Pad">ควบคุมผ่าน Touch Pad</option>
-                        <option value="ควบคุมผ่าน iPad">ควบคุมผ่าน iPad</option>
+                        {getOptionsForCategory('control_interface', ['ควบคุมผ่านปุ่มกด', 'ควบคุมผ่าน Touch Pad', 'ควบคุมผ่าน iPad'], false).map(opt => (
+                          <option key={opt} value={opt}>{opt === 'ควบคุมผ่านปุ่มกด' ? 'ควบคุมผ่านปุ่มกด (Keypad)' : opt === 'ควบคุมผ่าน Touch Pad' ? 'ควบคุมผ่าน Touch Pad' : opt === 'ควบคุมผ่าน iPad' ? 'ควบคุมผ่าน iPad' : opt}</option>
+                        ))}
                       </select>
                     </div>
 
@@ -1871,8 +1885,9 @@ function SurveyWizardForm() {
                         className="w-full px-3 py-2 border border-slate-200 bg-white rounded-lg text-xs font-semibold"
                       >
                         <option value="">-- เลือก --</option>
-                        <option value="ลูกค้ามี iPad อยู่แล้ว">ลูกค้ามี iPad อยู่แล้ว</option>
-                        <option value="ลูกค้าต้องการ iPad เพิ่ม">ลูกค้าต้องการ iPad เพิ่ม</option>
+                        {getOptionsForCategory('control_ipad', ['ลูกค้ามี iPad อยู่แล้ว', 'ลูกค้าต้องการ iPad เพิ่ม'], false).map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -1905,10 +1920,9 @@ function SurveyWizardForm() {
                         className="w-full px-3 py-2 border border-slate-200 bg-white rounded-lg text-xs font-semibold"
                       >
                         <option value="">-- เลือก --</option>
-                        <option value="LAN (สายแลน)">LAN (สายแลน)</option>
-                        <option value="Wi-Fi (ไร้สาย)">Wi-Fi (ไร้สาย)</option>
-                        <option value="LAN & Wi-Fi">LAN & Wi-Fi ทั้งคู่</option>
-                        <option value="ไม่ต้องเชื่อมต่อเครือข่าย">ไม่ต้องเชื่อมต่อเครือข่าย</option>
+                        {getOptionsForCategory('network_interface', ['LAN (สายแลน)', 'Wi-Fi (ไร้สาย)', 'LAN & Wi-Fi', 'ไม่ต้องเชื่อมต่อเครือข่าย'], false).map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
                       </select>
                     </div>
 
@@ -1920,8 +1934,9 @@ function SurveyWizardForm() {
                         className="w-full px-3 py-2 border border-slate-200 bg-white rounded-lg text-xs font-semibold"
                       >
                         <option value="">-- เลือก --</option>
-                        <option value="เชื่อมต่อ internet">เชื่อมต่อ internet</option>
-                        <option value="ไม่เชื่อมต่อ internet">ไม่เชื่อมต่อ internet</option>
+                        {getOptionsForCategory('network_ip', ['เชื่อมต่อ internet', 'ไม่เชื่อมต่อ internet'], false).map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
                       </select>
                     </div>
 
@@ -1933,9 +1948,9 @@ function SurveyWizardForm() {
                         className="w-full px-3 py-2 border border-slate-200 bg-white rounded-lg text-xs font-semibold"
                       >
                         <option value="">-- เลือก --</option>
-                        <option value="Switch">Switch</option>
-                        <option value="Access point">Access point</option>
-                        <option value="Switch/Access point">Switch/Access point</option>
+                        {getOptionsForCategory('network_responsibility', ['Switch', 'Access point', 'Switch/Access point'], false).map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
                       </select>
                     </div>
                   </div>
