@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Trash2, Undo, Circle, Type, Eye, Check, Edit3, Image as ImageIcon, RotateCw, Square } from 'lucide-react';
+import { Trash2, Undo, Circle, Type, Eye, Check, Edit3, Image as ImageIcon, RotateCw, Square, Hand } from 'lucide-react';
 
 interface ImageAnnotationProps {
   imageSrc: string; // Base64 string of original image
@@ -19,7 +19,7 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [imgElement, setImgElement] = useState<HTMLImageElement | null>(null);
-  const [tool, setTool] = useState<'line' | 'circle' | 'rect' | 'text'>('line');
+  const [tool, setTool] = useState<'line' | 'circle' | 'rect' | 'text' | 'pan'>('line');
   const [color, setColor] = useState('#ef4444'); // default red
   const [lineWidth, setLineWidth] = useState(3);
   const [textSize, setTextSize] = useState(18);
@@ -27,6 +27,26 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
+
+  // Zoom & Pan states
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [startPanPos, setStartPanPos] = useState({ x: 0, y: 0 });
+  const [initialPan, setInitialPan] = useState({ x: 0, y: 0 });
+
+  // Mobile pinch-zoom state
+  const [isPinching, setIsPinching] = useState(false);
+  const [initialDistance, setInitialDistance] = useState(0);
+  const [initialZoom, setInitialZoom] = useState(1);
+
+  // Helper for touch math
+  const getTouchDistance = (t1: React.Touch, t2: React.Touch) => {
+    return Math.sqrt(Math.pow(t2.clientX - t1.clientX, 2) + Math.pow(t2.clientY - t1.clientY, 2));
+  };
+  const getTouchMidpoint = (t1: React.Touch, t2: React.Touch) => {
+    return { x: (t1.clientX + t2.clientX) / 2, y: (t1.clientY + t2.clientY) / 2 };
+  };
 
   // Load image
   useEffect(() => {
@@ -37,30 +57,36 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
     img.onload = () => {
       setImgElement(img);
       setShapes([]); // Reset annotations for new image
+      setZoom(1);
+      setPan({ x: 0, y: 0 });
     };
   }, [imageSrc]);
 
   // Handle canvas resize and drawing
   useEffect(() => {
-    if (!canvasRef.current || !imgElement || !containerRef.current) return;
+    if (!canvasRef.current || !imgElement) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const containerWidth = containerRef.current.clientWidth;
-    const scale = containerWidth / imgElement.width;
-    
-    canvas.width = containerWidth;
-    canvas.height = imgElement.height * scale;
+    // Set fixed logical size to original image dimensions (prevents rotation layout breaking)
+    canvas.width = imgElement.width;
+    canvas.height = imgElement.height;
 
     draw(ctx, canvas.width, canvas.height);
-  }, [imgElement, shapes, isDrawing, currentPos, tool, color, lineWidth, textSize]);
+  }, [imgElement, shapes, isDrawing, currentPos, tool, color, lineWidth, textSize, zoom, pan]);
 
   const draw = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
     if (!imgElement) return;
 
     ctx.clearRect(0, 0, width, height);
+
+    ctx.save();
+    
+    // Apply pan and zoom transforms
+    ctx.translate(pan.x, pan.y);
+    ctx.scale(zoom, zoom);
     
     // Draw background image
     ctx.drawImage(imgElement, 0, 0, width, height);
@@ -71,23 +97,23 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
       ctx.fillStyle = shape.color;
 
       if (shape.type === 'line') {
-        ctx.lineWidth = shape.width || 3;
+        ctx.lineWidth = (shape.width || 3) / zoom;
         ctx.beginPath();
         ctx.moveTo(shape.x1, shape.y1);
         ctx.lineTo(shape.x2, shape.y2);
         ctx.stroke();
       } else if (shape.type === 'circle') {
-        ctx.lineWidth = shape.width || 3;
+        ctx.lineWidth = (shape.width || 3) / zoom;
         ctx.beginPath();
         ctx.arc(shape.cx, shape.cy, shape.r, 0, 2 * Math.PI);
         ctx.stroke();
       } else if (shape.type === 'rect') {
-        ctx.lineWidth = shape.width || 3;
+        ctx.lineWidth = (shape.width || 3) / zoom;
         ctx.beginPath();
         ctx.rect(shape.x1, shape.y1, shape.x2 - shape.x1, shape.y2 - shape.y1);
         ctx.stroke();
       } else if (shape.type === 'text') {
-        ctx.font = `bold ${shape.size}px sans-serif`;
+        ctx.font = `bold ${shape.size / zoom}px sans-serif`;
         ctx.fillText(shape.text, shape.x, shape.y);
       }
     });
@@ -96,7 +122,7 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
     if (isDrawing) {
       ctx.strokeStyle = color;
       ctx.fillStyle = color;
-      ctx.lineWidth = lineWidth;
+      ctx.lineWidth = lineWidth / zoom;
 
       if (tool === 'line') {
         ctx.beginPath();
@@ -116,6 +142,8 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
         ctx.stroke();
       }
     }
+
+    ctx.restore();
   };
 
   const getCoordinates = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -124,7 +152,7 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
 
     const rect = canvas.getBoundingClientRect();
     
-    let clientX, clientY;
+    let clientX = 0, clientY = 0;
     if ('touches' in e) {
       if (e.touches.length === 0) return { x: 0, y: 0 };
       clientX = e.touches[0].clientX;
@@ -134,13 +162,49 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
       clientY = e.clientY;
     }
 
-    const x = ((clientX - rect.left) / rect.width) * canvas.width;
-    const y = ((clientY - rect.top) / rect.height) * canvas.height;
+    // Map screen coordinates to the visual canvas scale
+    const visualX = ((clientX - rect.left) / rect.width) * canvas.width;
+    const visualY = ((clientY - rect.top) / rect.height) * canvas.height;
+
+    // Adjust for Zoom and Pan offset
+    const x = (visualX - pan.x) / zoom;
+    const y = (visualY - pan.y) / zoom;
 
     return { x, y };
   };
 
   const handleStart = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    let clientX = 0, clientY = 0;
+    if ('touches' in e) {
+      if (e.touches.length === 2) {
+        setIsPinching(true);
+        setIsDrawing(false);
+        setIsPanning(false);
+        const dist = getTouchDistance(e.touches[0], e.touches[1]);
+        setInitialDistance(dist);
+        setInitialZoom(zoom);
+        
+        const mid = getTouchMidpoint(e.touches[0], e.touches[1]);
+        setStartPanPos(mid);
+        setInitialPan(pan);
+        return;
+      }
+      if (e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      }
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
+    if (tool === 'pan') {
+      setIsPanning(true);
+      setStartPanPos({ x: clientX, y: clientY });
+      setInitialPan(pan);
+      return;
+    }
+
     if (e.cancelable) {
       e.preventDefault();
     }
@@ -169,6 +233,38 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
   };
 
   const handleMove = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    let clientX = 0, clientY = 0;
+    if ('touches' in e) {
+      if (e.touches.length === 2 && isPinching) {
+        // Pinch zooming with 2 fingers
+        const dist = getTouchDistance(e.touches[0], e.touches[1]);
+        const scaleMultiplier = dist / initialDistance;
+        const newZoom = Math.max(0.5, Math.min(5, initialZoom * scaleMultiplier));
+        setZoom(newZoom);
+
+        // Panning with 2 fingers
+        const mid = getTouchMidpoint(e.touches[0], e.touches[1]);
+        const dx = mid.x - startPanPos.x;
+        const dy = mid.y - startPanPos.y;
+        setPan({ x: initialPan.x + dx, y: initialPan.y + dy });
+        return;
+      }
+      if (e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      }
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
+    if (isPanning) {
+      const dx = clientX - startPanPos.x;
+      const dy = clientY - startPanPos.y;
+      setPan({ x: initialPan.x + dx, y: initialPan.y + dy });
+      return;
+    }
+
     if (!isDrawing) return;
     if (e.cancelable) {
       e.preventDefault();
@@ -178,6 +274,15 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
   };
 
   const handleEnd = () => {
+    if (isPinching) {
+      setIsPinching(false);
+      return;
+    }
+    if (isPanning) {
+      setIsPanning(false);
+      return;
+    }
+
     if (!isDrawing) return;
     setIsDrawing(false);
 
@@ -318,10 +423,21 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
             <Type className="w-3.5 h-3.5" />
             ข้อความ
           </button>
+          <button
+            type="button"
+            onClick={() => setTool('pan')}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1 transition-all ${
+              tool === 'pan' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-655 hover:text-slate-900'
+            }`}
+            title="ย้ายและขยายรูปภาพ"
+          >
+            <Hand className="w-3.5 h-3.5" />
+            ย้ายภาพ
+          </button>
         </div>
 
-        {/* Basic Edit: Rotate */}
-        <div className="flex gap-2 items-center">
+        {/* Basic Edit: Rotate & Zoom */}
+        <div className="flex gap-2 items-center flex-wrap">
           <button
             type="button"
             onClick={handleRotate}
@@ -331,6 +447,36 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
             <RotateCw className="w-3.5 h-3.5" />
             หมุนรูปภาพ
           </button>
+
+          <div className="flex gap-1 items-center bg-slate-200/50 p-1 rounded-lg">
+            <button
+              type="button"
+              onClick={() => setZoom(z => Math.min(5, z + 0.25))}
+              className="w-7 h-7 bg-white hover:bg-slate-100 border border-slate-250 text-slate-700 text-xs font-bold rounded flex items-center justify-center transition"
+              title="ขยาย (Zoom In)"
+            >
+              +
+            </button>
+            <span className="text-[10px] font-bold text-slate-600 px-1 min-w-[36px] text-center">
+              {Math.round(zoom * 100)}%
+            </span>
+            <button
+              type="button"
+              onClick={() => setZoom(z => Math.max(0.5, z - 0.25))}
+              className="w-7 h-7 bg-white hover:bg-slate-100 border border-slate-250 text-slate-700 text-xs font-bold rounded flex items-center justify-center transition"
+              title="ย่อ (Zoom Out)"
+            >
+              -
+            </button>
+            <button
+              type="button"
+              onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
+              className="px-2 py-1 bg-white hover:bg-slate-100 border border-slate-250 text-slate-700 text-[10px] font-semibold rounded flex items-center justify-center transition"
+              title="รีเซ็ตตำแหน่งและขนาด"
+            >
+              Reset
+            </button>
+          </div>
         </div>
 
         {/* Customization controls */}
@@ -414,7 +560,14 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
           onTouchStart={handleStart}
           onTouchMove={handleMove}
           onTouchEnd={handleEnd}
-          className="cursor-crosshair block max-w-full touch-none"
+          className={`block max-w-full touch-none ${
+            tool === 'pan' ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-crosshair'
+          }`}
+          style={{
+            maxHeight: '70vh',
+            objectFit: 'contain',
+            backgroundColor: '#020617'
+          }}
         />
         {!imgElement && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
@@ -439,7 +592,7 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
           type="button"
           onClick={handleFinish}
           disabled={!imgElement}
-          className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-sm font-semibold text-white rounded-lg flex items-center gap-1.5 transition shadow-sm"
+          className="px-5 py-2 btn btn-primary disabled:bg-slate-400 text-sm font-semibold text-white rounded-lg flex items-center gap-1.5 transition shadow-sm"
         >
           <Check className="w-4 h-4" />
           บันทึกรูปภาพ

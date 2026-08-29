@@ -115,6 +115,7 @@ export interface DraftSurvey {
   projectName: string;
   customerName: string;
   salesPersonId?: number;
+  salesPersonName?: string;
   status: 'draft' | 'pending_sync';
   createdAt: string;
   updatedAt: string;

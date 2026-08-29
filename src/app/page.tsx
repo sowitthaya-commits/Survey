@@ -97,6 +97,8 @@ export default function Dashboard() {
         id: d.id,
         projectName: d.projectName,
         customerName: d.customerName,
+        salesPersonId: d.salesPersonId,
+        salesPersonName: d.salesPersonName,
         status: d.status,
         docUrl: null,
         pdfUrl: null,

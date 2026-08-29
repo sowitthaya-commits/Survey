@@ -70,13 +70,30 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { id, roomsData, existingImages, ...surveyData } = body;
+    const { id, roomsData, existingImages, salesPersonName, ...surveyData } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'Survey ID (UUID) is required' }, { status: 400 });
     }
 
     const now = new Date().toISOString();
+
+    // Find or create sales person record by name
+    let spId = surveyData.salesPersonId;
+    if (salesPersonName) {
+      let sp = await db.select().from(salesPersons).where(eq(salesPersons.name, salesPersonName)).get();
+      if (!sp) {
+        await db.insert(salesPersons).values({
+          name: salesPersonName,
+          email: null,
+          phone: null
+        }).run();
+        sp = await db.select().from(salesPersons).where(eq(salesPersons.name, salesPersonName)).get();
+      }
+      if (sp) {
+        spId = sp.id;
+      }
+    }
 
     // 1. Process project-wide existing images (Upload to Google Drive)
     let existingImagesList = [];
@@ -118,6 +135,7 @@ export async function POST(request: Request) {
       await db.update(surveys)
         .set({
           ...surveyData,
+          salesPersonId: spId,
           existingImages: existingImagesString,
           roomsData: roomsDataString,
           updatedAt: now,
@@ -128,6 +146,7 @@ export async function POST(request: Request) {
         .values({
           id,
           ...surveyData,
+          salesPersonId: spId,
           existingImages: existingImagesString,
           roomsData: roomsDataString,
           createdAt: now,

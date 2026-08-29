@@ -105,6 +105,8 @@ function SurveyWizardForm() {
   const [projectName, setProjectName] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [salesPersonId, setSalesPersonId] = useState<number | undefined>(undefined);
+  const [salesPersonName, setSalesPersonName] = useState<string>('');
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [locationAddress, setLocationAddress] = useState('');
   const [requestDate, setRequestDate] = useState('');
   const [quotationDeadline, setQuotationDeadline] = useState('');
@@ -123,8 +125,8 @@ function SurveyWizardForm() {
       name: 'ห้อง/จุดติดตั้งที่ 1',
       images: [],
       inputPorts: [
-        { id: uuidv4(), portType: 'HDMI', portQty: 1 },
-        { id: uuidv4(), portType: 'LAN', portQty: 1 }
+        { id: uuidv4(), portType: 'HDMI', portQty: 0 },
+        { id: uuidv4(), portType: 'LAN', portQty: 0 }
       ],
       visualOthersEnabled: {
         interactive: false,
@@ -222,6 +224,18 @@ function SurveyWizardForm() {
     } else {
       loadMasterData();
     }
+
+    fetch('/api/auth/me')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data && data.user) {
+          setCurrentUser(data.user);
+          if (!editId) {
+            setSalesPersonName(data.user.name);
+          }
+        }
+      })
+      .catch(err => console.error('Failed to load session user:', err));
   }, []);
 
   // Load survey data for Edit or generate new UUID
@@ -272,6 +286,7 @@ function SurveyWizardForm() {
         setProjectName(data.projectName || '');
         setCustomerName(data.customerName || '');
         setSalesPersonId(data.salesPersonId);
+        setSalesPersonName(data.salesPersonName || '');
         setContactName(data.contactName || '');
         setContactPhone(data.contactPhone || '');
         setSurveyDate(data.surveyDate || '');
@@ -331,8 +346,8 @@ function SurveyWizardForm() {
       name: `ห้อง/จุดติดตั้งที่ ${rooms.length + 1}`,
       images: [],
       inputPorts: [
-        { id: uuidv4(), portType: 'HDMI', portQty: 1 },
-        { id: uuidv4(), portType: 'LAN', portQty: 1 }
+        { id: uuidv4(), portType: 'HDMI', portQty: 0 },
+        { id: uuidv4(), portType: 'LAN', portQty: 0 }
       ],
       visualOthersEnabled: {
         interactive: false,
@@ -558,6 +573,7 @@ function SurveyWizardForm() {
       projectName,
       customerName,
       salesPersonId,
+      salesPersonName: salesPersonName || currentUser?.name || '',
       status,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -608,6 +624,7 @@ function SurveyWizardForm() {
       projectName,
       customerName,
       salesPersonId,
+      salesPersonName: salesPersonName || currentUser?.name || '',
       requestDate: requestDate || null,
       locationLat: locationLat || null,
       locationLng: locationLng || null,
@@ -826,19 +843,7 @@ function SurveyWizardForm() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">ผู้ทำแบบสำรวจ</label>
-                  <select
-                    value={salesPersonId || ''}
-                    onChange={(e) => setSalesPersonId(e.target.value ? Number(e.target.value) : undefined)}
-                    className="w-full px-3.5 py-2.5 border border-slate-250 rounded-xl text-sm bg-white"
-                  >
-                    <option value="">-- เลือกรายชื่อ --</option>
-                    {salesPersons.map((sp) => (
-                      <option key={sp.id} value={sp.id}>{sp.name}</option>
-                    ))}
-                  </select>
-                </div>
+
 
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">วันที่แจ้งขอสเปค</label>
@@ -1531,7 +1536,7 @@ function SurveyWizardForm() {
                           <input
                             type="number"
                             value={port.portQty}
-                            onChange={(e) => updateInputPort(activeRoomIndex, port.id, 'portQty', e.target.value ? parseInt(e.target.value) : 1)}
+                            onChange={(e) => updateInputPort(activeRoomIndex, port.id, 'portQty', e.target.value ? parseInt(e.target.value) : 0)}
                             placeholder="จำนวน"
                             className="w-16 px-2.5 py-1 border border-slate-200 rounded bg-white text-xs text-center font-bold"
                           />
