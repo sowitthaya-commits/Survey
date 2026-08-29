@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { offlineDb, type DraftSurvey, type RoomData, type RoomImage, type InputPortItem } from '@/lib/offlineDb';
 import { syncMasterDataCache } from '@/lib/offlineSyncHelper';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
+import { uploadSurveyBase64Images } from '@/lib/uploadHelper';
 import ImageAnnotation from '@/components/ImageAnnotation';
 import { 
   ArrowLeft, ArrowRight, Save, Image as ImageIcon, Sparkles, Check, 
@@ -214,6 +215,22 @@ function SurveyWizardForm() {
     (mapContainer as any)._mapInstance = map;
     (mapContainer as any)._markerInstance = marker;
   }, [mapLoaded, currentStep]);
+
+  // Synchronize Leaflet map and marker position when coordinates change (e.g. after draft loads)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mapContainer = document.getElementById('map-picker');
+    if (!mapContainer) return;
+    const existingMap = (mapContainer as any)._mapInstance;
+    const existingMarker = (mapContainer as any)._markerInstance;
+    if (existingMap && existingMarker) {
+      const currentLatLng = existingMarker.getLatLng();
+      if (currentLatLng.lat !== locationLat || currentLatLng.lng !== locationLng) {
+        existingMap.setView([locationLat, locationLng], existingMap.getZoom());
+        existingMarker.setLatLng([locationLat, locationLng]);
+      }
+    }
+  }, [locationLat, locationLng]);
 
   // Load master data on mount
   useEffect(() => {
@@ -639,13 +656,19 @@ function SurveyWizardForm() {
     };
 
     try {
+      let finalPayload = payload;
+      if (isOnline) {
+        // Upload images one-by-one to avoid 413 Payload Too Large
+        finalPayload = await uploadSurveyBase64Images(payload);
+      }
+
       if (isOnline) {
         const res = await fetch('/api/surveys', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(finalPayload),
         });
 
         if (res.ok) {
