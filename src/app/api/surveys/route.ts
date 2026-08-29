@@ -161,13 +161,16 @@ export async function POST(request: Request) {
     const docUrl = `https://docs.google.com/document/d/${mockDocId}/edit?usp=drivesdk`;
     const pdfUrl = `/uploads/${id}/survey_report_${id.substring(0, 8)}.pdf`;
 
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', id);
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    try {
+      const uploadDir = path.join(process.cwd(), 'public', 'uploads', id);
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      const pdfPath = path.join(uploadDir, `survey_report_${id.substring(0, 8)}.pdf`);
+      fs.writeFileSync(pdfPath, `%PDF-1.4\n% MOCKED SURVEY REPORT FOR ${surveyData.projectName}\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << >> /Contents 4 0 R >>\nendobj\n4 0 obj\n<< /Length 50 >>\nstream\nBT /F1 12 Tf 70 700 Td (Mock Survey PDF Report for Multi-Room Layout) Tj ET\nendstream\nendobj\nxref\n0 5\n0000000000 65535 f\n0000000009 00000 n\n0000000062 00000 n\n0000000119 00000 n\n0000000216 00000 n\ntrailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n315\n%%EOF`);
+    } catch (fsErr) {
+      console.warn('Warning: Could not write mock PDF to local read-only filesystem:', fsErr);
     }
-    const pdfPath = path.join(uploadDir, `survey_report_${id.substring(0, 8)}.pdf`);
-    
-    fs.writeFileSync(pdfPath, `%PDF-1.4\n% MOCKED SURVEY REPORT FOR ${surveyData.projectName}\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << >> /Contents 4 0 R >>\nendobj\n4 0 obj\n<< /Length 50 >>\nstream\nBT /F1 12 Tf 70 700 Td (Mock Survey PDF Report for Multi-Room Layout) Tj ET\nendstream\nendobj\nxref\n0 5\n0000000000 65535 f\n0000000009 00000 n\n0000000062 00000 n\n0000000119 00000 n\n0000000216 00000 n\ntrailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n315\n%%EOF`);
 
     // Update survey with URLs and completed status
     await db.update(surveys)

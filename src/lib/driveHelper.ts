@@ -81,13 +81,18 @@ export async function uploadFileToDrive(
   // Fallback to local storage if credentials are not provided
   if (!auth) {
     console.log('Google credentials not set. Falling back to local storage.');
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', surveyId);
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    try {
+      const uploadDir = path.join(process.cwd(), 'public', 'uploads', surveyId);
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      const localPath = path.join(uploadDir, fileName);
+      fs.writeFileSync(localPath, buffer);
+      return `/uploads/${surveyId}/${fileName}`;
+    } catch (writeErr) {
+      console.warn('Failed to write locally (read-only filesystem):', writeErr);
+      return base64Str; // Return base64 directly so the UI still displays it
     }
-    const localPath = path.join(uploadDir, fileName);
-    fs.writeFileSync(localPath, buffer);
-    return `/uploads/${surveyId}/${fileName}`;
   }
 
   try {

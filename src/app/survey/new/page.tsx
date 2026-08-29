@@ -1297,8 +1297,21 @@ function SurveyWizardForm() {
                     <div>
                       <label className="block text-xs text-slate-655 mb-1">ลักษณะการใช้งาน</label>
                       <select
-                        value={currentRoom.ledApplication || ''}
-                        onChange={(e) => updateRoomField(activeRoomIndex, 'ledApplication', e.target.value)}
+                        value={
+                          !currentRoom.ledApplication
+                            ? ''
+                            : ['ห้องประชุม', 'โฆษณา'].includes(currentRoom.ledApplication)
+                            ? currentRoom.ledApplication
+                            : 'อื่นๆ'
+                        }
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === 'อื่นๆ') {
+                            updateRoomField(activeRoomIndex, 'ledApplication', 'อื่นๆ (โปรดระบุ)');
+                          } else {
+                            updateRoomField(activeRoomIndex, 'ledApplication', val);
+                          }
+                        }}
                         className="w-full px-3 py-1.5 border border-slate-200 bg-white rounded-lg text-xs font-semibold"
                       >
                         <option value="">-- เลือกการใช้งาน --</option>
@@ -1306,6 +1319,27 @@ function SurveyWizardForm() {
                         <option value="โฆษณา">โฆษณา</option>
                         <option value="อื่นๆ">อื่นๆ</option>
                       </select>
+
+                      {currentRoom.ledApplication &&
+                        !['ห้องประชุม', 'โฆษณา'].includes(currentRoom.ledApplication) && (
+                          <input
+                            type="text"
+                            value={
+                              currentRoom.ledApplication.startsWith('อื่นๆ')
+                                ? currentRoom.ledApplication.replace(/^อื่นๆ\s*\(โปรดระบุ\)\s*|^อื่นๆ\s*-?\s*/, '')
+                                : currentRoom.ledApplication
+                            }
+                            onChange={(e) =>
+                              updateRoomField(
+                                activeRoomIndex,
+                                'ledApplication',
+                                e.target.value ? `อื่นๆ - ${e.target.value}` : 'อื่นๆ (โปรดระบุ)'
+                              )
+                            }
+                            placeholder="ระบุลักษณะการใช้งานอื่นๆ..."
+                            className="w-full mt-1.5 px-3 py-1.5 border border-slate-250 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-blue-500 bg-white"
+                          />
+                        )}
                     </div>
                   </div>
                 </div>
@@ -2119,8 +2153,8 @@ function SurveyWizardForm() {
                               <Network className="w-3.5 h-3.5" /> ระบบ IT Network
                             </span>
                             <p className="text-[11px]"><span className="text-slate-400">การเชื่อมต่อเน็ต:</span> <span className="font-bold text-slate-900">{room.networkInterface || '-'}</span></p>
-                            <p className="text-[11px]"><span className="text-slate-400">การจัดแจก IP:</span> <span className="font-semibold text-slate-800">{room.networkIPRequirement || '-'}</span></p>
-                            <p className="text-[11px]"><span className="text-slate-400">ผู้จัดเตรียมหลัก:</span> <span className="font-medium">{room.networkResponsibility || '-'}</span></p>
+                            <p className="text-[11px]"><span className="text-slate-400">ลักษณะการเชื่อมต่อ:</span> <span className="font-semibold text-slate-800">{room.networkIPRequirement || '-'}</span></p>
+                            <p className="text-[11px]"><span className="text-slate-400">การจัดเตรียมเครือข่าย:</span> <span className="font-medium">{room.networkResponsibility || '-'}</span></p>
                             {room.networkNote && <p className="text-[10px] text-slate-500 italic mt-0.5">รายละเอียด: {room.networkNote}</p>}
                           </div>
                         </div>
