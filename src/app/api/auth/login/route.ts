@@ -22,11 +22,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Username หรือ Password ไม่ถูกต้อง' }, { status: 401 });
     }
 
-    // Check if account is active (1 = Active, 0 = Inactive)
-    if (user.active === 0) {
-      return NextResponse.json({ error: 'บัญชีผู้ใช้งานนี้ถูกระงับสิทธิ์การใช้งาน' }, { status: 403 });
-    }
-
     // Hash input password with SHA-256 and compare
     const hashed = hashPassword(password);
     if (user.password !== hashed) {
