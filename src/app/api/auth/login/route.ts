@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { users } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { hashPassword, setSession } from '@/lib/authHelper';
 
 export async function POST(request: Request) {
@@ -12,10 +12,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'กรุณากรอก Username และ Password' }, { status: 400 });
     }
 
-    // Query user from Turso DB
+    // Query user from Turso DB (case-insensitive lookup matching original app)
     const user = await db.select()
       .from(users)
-      .where(eq(users.username, username))
+      .where(eq(sql`lower(${users.username})`, username.toLowerCase()))
       .get();
 
     if (!user) {
