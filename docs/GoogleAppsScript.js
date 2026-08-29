@@ -59,18 +59,30 @@ function doPost(e) {
       
       try {
         const templateFile = DriveApp.getFileById(TEMPLATE_DOC_ID);
+        const mimeType = templateFile.getMimeType();
         const newDocFile = templateFile.makeCopy('รายงานการสำรวจ - ' + projectName + ' (' + customerName + ')', targetFolder);
-        const doc = DocumentApp.openById(newDocFile.getId());
-        const body = doc.getBody();
         
-        // แทรกข้อมูลทั่วไป
-        body.replaceText('{{PROJECT_NAME}}', projectName);
-        body.replaceText('{{CUSTOMER_NAME}}', customerName);
-        body.replaceText('{{BUDGET}}', postData.budget ? Number(postData.budget).toLocaleString() + ' บาท' : '-');
-        body.replaceText('{{SALES_PERSON}}', postData.salesPersonName || '-');
-        body.replaceText('{{SURVEY_DATE}}', postData.surveyDate || '-');
-        
-        doc.saveAndClose();
+        if (mimeType === MimeType.GOOGLE_SHEETS || mimeType === 'application/vnd.google-apps.spreadsheet') {
+          const ss = SpreadsheetApp.openById(newDocFile.getId());
+          ss.createTextFinder('{{PROJECT_NAME}}').replaceAllWith(projectName);
+          ss.createTextFinder('{{CUSTOMER_NAME}}').replaceAllWith(customerName);
+          ss.createTextFinder('{{BUDGET}}').replaceAllWith(postData.budget ? Number(postData.budget).toLocaleString() + ' บาท' : '-');
+          ss.createTextFinder('{{SALES_PERSON}}').replaceAllWith(postData.salesPersonName || '-');
+          ss.createTextFinder('{{SURVEY_DATE}}').replaceAllWith(postData.surveyDate || '-');
+          SpreadsheetApp.flush();
+        } else {
+          const doc = DocumentApp.openById(newDocFile.getId());
+          const body = doc.getBody();
+          
+          // แทรกข้อมูลทั่วไป
+          body.replaceText('{{PROJECT_NAME}}', projectName);
+          body.replaceText('{{CUSTOMER_NAME}}', customerName);
+          body.replaceText('{{BUDGET}}', postData.budget ? Number(postData.budget).toLocaleString() + ' บาท' : '-');
+          body.replaceText('{{SALES_PERSON}}', postData.salesPersonName || '-');
+          body.replaceText('{{SURVEY_DATE}}', postData.surveyDate || '-');
+          
+          doc.saveAndClose();
+        }
         
         const pdfBlob = newDocFile.getAs('application/pdf');
         const newPdfFile = targetFolder.createFile(pdfBlob);
