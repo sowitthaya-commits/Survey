@@ -1,69 +1,703 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useOfflineSync } from '@/hooks/useOfflineSync';
+import { offlineDb, type DraftSurvey } from '@/lib/offlineDb';
+import { syncMasterDataCache } from '@/lib/offlineSyncHelper';
+import { 
+  Plus, Search, FileText, Download, Edit2, Trash2, Database, 
+  Wifi, WifiOff, RefreshCw, AlertCircle, FileSpreadsheet, Loader2, 
+  CheckCircle2, Eye, Copy, X, MapPin, Monitor, Volume2, ShieldCheck, Image as ImageIcon, Check, LogOut
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { v4 as uuidv4 } from 'uuid';
+
+interface SurveyItem {
+  id: string;
+  projectName: string;
+  customerName: string;
+  salesPersonName?: string;
+  salesPersonId?: number;
+  status: 'draft' | 'pending_sync' | 'generating' | 'completed' | 'synced';
+  docUrl: string | null;
+  pdfUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+  requestDate?: string;
+  locationLat?: number;
+  locationLng?: number;
+  locationAddress?: string;
+  quotationDeadline?: string;
+  budget?: string;
+  existingImages: any[];
+  contactName?: string;
+  contactPhone?: string;
+  surveyDate?: string;
+  roomsData: any[];
+}
+
+export default function Dashboard() {
+  const router = useRouter();
+  const { isOnline, pendingCount, syncing, syncError, syncPendingSurveys } = useOfflineSync();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [surveys, setSurveys] = useState<SurveyItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [masterSynced, setMasterSynced] = useState(false);
+
+  // Summary Modal state
+  const [selectedSurvey, setSelectedSurvey] = useState<SurveyItem | null>(null);
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    loadAllSurveys();
+    
+    if (isOnline && !masterSynced) {
+      syncMasterDataCache().then(() => setMasterSynced(true));
+    }
+
+    fetch('/api/auth/me')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data && data.user) {
+          setCurrentUser(data.user);
+        }
+      })
+      .catch(err => console.error('Failed to load session:', err));
+  }, [isOnline, pendingCount, syncing]);
+
+  const handleLogout = async () => {
+    if (!confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) return;
+    const res = await fetch('/api/auth/logout', { method: 'POST' });
+    if (res.ok) {
+      router.push('/login');
+      router.refresh();
+    }
+  };
+
+  const loadAllSurveys = async () => {
+    setLoading(true);
+    try {
+      let serverSurveys: SurveyItem[] = [];
+
+      if (isOnline) {
+        try {
+          const response = await fetch('/api/surveys');
+          if (response.ok) {
+            serverSurveys = await response.json();
+          }
+        } catch (e) {
+          console.error('Failed to fetch from SQLite server:', e);
+        }
+      }
+
+      const localDrafts = await offlineDb.draftSurveys.toArray();
+      const localSurveys: SurveyItem[] = localDrafts.map(d => ({
+        id: d.id,
+        projectName: d.projectName,
+        customerName: d.customerName,
+        status: d.status,
+        docUrl: null,
+        pdfUrl: null,
+        createdAt: d.createdAt,
+        updatedAt: d.updatedAt,
+        requestDate: d.requestDate,
+        locationLat: d.locationLat,
+        locationLng: d.locationLng,
+        locationAddress: d.locationAddress,
+        quotationDeadline: d.quotationDeadline,
+        budget: d.budget,
+        existingImages: d.existingImages || [],
+        contactName: d.contactName,
+        contactPhone: d.contactPhone,
+        surveyDate: d.surveyDate,
+        roomsData: d.roomsData || [],
+      }));
+
+      const mergedList = [...localSurveys];
+      
+      serverSurveys.forEach(serverSurvey => {
+        const index = mergedList.findIndex(local => local.id === serverSurvey.id);
+        if (index > -1) {
+          mergedList[index] = serverSurvey;
+        } else {
+          mergedList.push(serverSurvey);
+        }
+      });
+
+      mergedList.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      
+      setSurveys(mergedList);
+    } catch (error) {
+      console.error('Error loading surveys:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredSurveys = surveys.filter(s => 
+    s.projectName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    s.customerName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleDelete = async (id: string, status: string) => {
+    if (!confirm('คุณต้องการลบข้อมูลแบบสำรวจนี้พร้อมรูปภาพและเอกสารทั้งหมดใช่หรือไม่?')) return;
+
+    try {
+      if (status === 'draft' || status === 'pending_sync') {
+        await offlineDb.draftSurveys.delete(id);
+        alert('ลบแบบร่างในเครื่องเรียบร้อยแล้ว');
+      } else {
+        if (!isOnline) {
+          alert('คุณไม่สามารถลบข้อมูลบนเซิร์ฟเวอร์ได้ขณะออฟไลน์');
+          return;
+        }
+
+        const res = await fetch(`/api/surveys?id=${id}`, {
+          method: 'DELETE',
+        });
+
+        if (res.ok) {
+          alert('ลบข้อมูลจากระบบและ Google Drive เรียบร้อยแล้ว');
+        } else {
+          alert('ไม่สามารถลบข้อมูลจากเซิร์ฟเวอร์ได้');
+        }
+      }
+      
+      loadAllSurveys();
+    } catch (e) {
+      console.error('Error deleting survey:', e);
+    }
+  };
+
+  const handleClone = async (item: SurveyItem) => {
+    if (!confirm(`คุณต้องการคัดลอกแบบสำรวจโครงการ "${item.projectName}" เพื่อนำไปใช้เป็นแม่แบบสำหรับสร้างงานใหม่ใช่หรือไม่?`)) return;
+
+    try {
+      const newUuid = uuidv4();
+      const now = new Date().toISOString();
+
+      const clonedRooms = (item.roomsData || []).map(room => {
+        return {
+          ...room,
+          id: uuidv4(),
+          images: [],
+        };
+      });
+
+      const draft: DraftSurvey = {
+        id: newUuid,
+        projectName: '',
+        customerName: '',
+        salesPersonId: item.salesPersonId,
+        status: 'draft',
+        createdAt: now,
+        updatedAt: now,
+        locationLat: item.locationLat,
+        locationLng: item.locationLng,
+        locationAddress: item.locationAddress,
+        existingImages: [],
+        roomsData: clonedRooms,
+      };
+
+      await offlineDb.draftSurveys.put(draft);
+      
+      alert('คัดลอกแม่แบบสำเร็จ! ระบบจะนำท่านไปยังฟอร์มกรอกข้อมูลลูกค้าโครงการใหม่');
+      router.push(`/survey/new?id=${newUuid}`);
+    } catch (e) {
+      console.error('Error cloning survey:', e);
+      alert('เกิดข้อผิดพลาดในการโคลนข้อมูล');
+    }
+  };
+
+  const triggerSync = async () => {
+    if (!isOnline) {
+      alert('ไม่สามารถซิงค์ได้เนื่องจากสัญญาณออฟไลน์');
+      return;
+    }
+    await syncPendingSurveys();
+    await loadAllSurveys();
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-slate-50 text-slate-800 pb-12">
+      
+      {/* Header Banner */}
+      <header className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white shadow-md">
+        <div className="max-w-6xl mx-auto px-4 py-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-extrabold tracking-tight">Survey System</h1>
+              <p className="text-blue-100 mt-1.5 text-sm">ระบบแบบฟอร์มสำรวจหน้างานอัจฉริยะ (Smart Site Survey Wizard)</p>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <div className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold ${
+                isOnline ? 'bg-emerald-500/20 text-emerald-200' : 'bg-rose-500/20 text-rose-200'
+              }`}>
+                {isOnline ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
+                {isOnline ? 'ออนไลน์' : 'ออฟไลน์'}
+              </div>
+
+              {currentUser && (
+                <div className="text-right hidden sm:block">
+                  <p className="text-xs font-bold text-white">{currentUser.name}</p>
+                  <p className="text-[10px] text-blue-200">{currentUser.position}</p>
+                </div>
+              )}
+
+              <Link 
+                href="/master"
+                className="bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-4 py-2 rounded-xl border border-white/20 flex items-center gap-1.5 transition"
+              >
+                <Database className="w-4 h-4" />
+                ตั้งค่าข้อมูลหลัก
+              </Link>
+
+              <button
+                onClick={handleLogout}
+                className="bg-rose-500/20 hover:bg-rose-500/35 text-rose-200 text-xs font-semibold px-4 py-2 rounded-xl border border-rose-500/30 flex items-center gap-1.5 transition"
+                title="ออกจากระบบ"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden md:inline">ออกจากระบบ</span>
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
+      </header>
+
+      {/* Main Section */}
+      <main className="max-w-6xl mx-auto px-4 mt-8">
+
+        {/* Sync Failure Warning Banner */}
+        {syncError && (
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-5 mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-pulse">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-6 h-6 text-rose-600 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-bold text-rose-800 text-sm">การเชื่อมต่อเพื่ออัปโหลดล้มเหลว (Sync Error)</h3>
+                <p className="text-xs text-rose-600 mt-1 font-semibold">
+                  {syncError}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={triggerSync}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs py-2.5 px-5 rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition"
+            >
+              ลองซิงค์ใหม่อีกครั้ง
+            </button>
+          </div>
+        )}
+
+        {/* Unsynced Offline Banner */}
+        {pendingCount > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-bold text-amber-800 text-sm">พบข้อมูลค้างการอัปโหลดลงระบบ</h3>
+                <p className="text-xs text-amber-600 mt-1">
+                  มีแบบสำรวจ {pendingCount} รายการที่บันทึกไว้ขณะออฟไลน์และยังไม่ได้ส่งขึ้นคลาวด์/Google Drive
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={triggerSync}
+              disabled={!isOnline || syncing}
+              className="bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white font-bold text-xs py-2.5 px-5 rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition"
+            >
+              {syncing ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  กำลังซิงค์...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  ซิงค์ข้อมูลเดี๋ยวนี้
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Dashboard Tools */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="ค้นหาชื่อโปรเจกต์ หรือชื่อลูกค้า..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          </div>
+
+          <Link
+            href="/survey/new"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm py-2 px-5 rounded-xl flex items-center justify-center gap-1.5 transition shadow-md"
           >
-            Documentation
-          </a>
+            <Plus className="w-4 h-4" />
+            เพิ่มแบบสำรวจใหม่
+          </Link>
+        </div>
+
+        {/* Data Table */}
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h2 className="font-bold text-slate-900 text-lg">รายการแบบสำรวจหน้างานทั้งหมด</h2>
+            <span className="text-xs text-slate-400 font-semibold">{filteredSurveys.length} รายการ</span>
+          </div>
+
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-2" />
+              <p className="text-sm">กำลังดึงข้อมูลแบบสำรวจ...</p>
+            </div>
+          ) : filteredSurveys.length === 0 ? (
+            <div className="text-center py-20 px-4 text-slate-500">
+              <FileSpreadsheet className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <p className="font-medium text-slate-700">ไม่พบข้อมูลแบบสำรวจในระบบ</p>
+              <p className="text-xs text-slate-400 mt-1">กดปุ่ม &quot;เพิ่มแบบสำรวจใหม่&quot; เพื่อกรอกแบบร่างหน้างาน</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-slate-150 bg-slate-50/50">
+                    <th className="py-3.5 px-6 font-bold text-slate-600 uppercase tracking-wide text-xs">ชื่อโปรเจกต์ / โครงการ</th>
+                    <th className="py-3.5 px-6 font-bold text-slate-600 uppercase tracking-wide text-xs">ลูกค้า / หน่วยงาน</th>
+                    <th className="py-3.5 px-6 font-bold text-slate-600 uppercase tracking-wide text-xs">ผู้สำรวจ</th>
+                    <th className="py-3.5 px-6 font-bold text-slate-600 uppercase tracking-wide text-xs">จำนวนห้อง</th>
+                    <th className="py-3.5 px-6 font-bold text-slate-600 uppercase tracking-wide text-xs">สถานะ</th>
+                    <th className="py-3.5 px-6 font-bold text-slate-600 uppercase tracking-wide text-xs text-right">การจัดการ</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredSurveys.map((survey) => (
+                    <tr key={survey.id} className="hover:bg-slate-50/50 transition">
+                      <td className="py-4 px-6 font-semibold text-slate-900 max-w-xs truncate" title={survey.projectName}>
+                        {survey.projectName || <em className="text-slate-400 font-normal">ไม่มีชื่อโปรเจกต์ (แบบร่าง)</em>}
+                      </td>
+                      <td className="py-4 px-6 text-slate-700 font-medium">
+                        {survey.customerName || <em className="text-slate-400 font-normal">ไม่ได้ระบุลูกค้า</em>}
+                      </td>
+                      <td className="py-4 px-6 text-slate-600 text-xs">
+                        {survey.salesPersonName || '-'}
+                      </td>
+                      <td className="py-4 px-6 text-slate-600 text-xs font-semibold">
+                        {(survey.roomsData || []).length} ห้อง / จุด
+                      </td>
+                      <td className="py-4 px-6">
+                        {renderStatusBadge(survey.status)}
+                      </td>
+                      <td className="py-4 px-6 text-right">
+                        <div className="flex justify-end gap-1.5">
+                          <button
+                            onClick={() => setSelectedSurvey(survey)}
+                            className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-all"
+                            title="เรียกดูสรุปข้อมูลคร่าวๆ"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+
+                          <a
+                            href={survey.docUrl || '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`p-2 rounded-lg transition-all ${
+                              survey.docUrl 
+                                ? 'bg-blue-50 text-blue-600 hover:bg-blue-100' 
+                                : 'bg-slate-100 text-slate-300 cursor-not-allowed'
+                            }`}
+                            onClick={(e) => !survey.docUrl && e.preventDefault()}
+                            title="ลิงก์ Google Docs เอกสารสรุป"
+                          >
+                            <FileText className="w-4 h-4" />
+                          </a>
+
+                          <a
+                            href={survey.pdfUrl || '#'}
+                            download
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`p-2 rounded-lg transition-all ${
+                              survey.pdfUrl 
+                                ? 'bg-amber-50 text-amber-600 hover:bg-amber-100' 
+                                : 'bg-slate-100 text-slate-300 cursor-not-allowed'
+                            }`}
+                            onClick={(e) => !survey.pdfUrl && e.preventDefault()}
+                            title="ดาวน์โหลดสรุปเป็น PDF"
+                          >
+                            <Download className="w-4 h-4" />
+                          </a>
+
+                          <button
+                            onClick={() => handleClone(survey)}
+                            className="p-2 bg-purple-50 hover:bg-purple-100 text-purple-600 hover:text-purple-800 rounded-lg transition-all"
+                            title="โคลน (Clone) คัดลอกไปทำเป็นงานใหม่"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
+
+                          <Link
+                            href={`/survey/new?id=${survey.id}`}
+                            className="p-2 bg-slate-55 hover:bg-slate-150 text-slate-600 hover:text-slate-900 rounded-lg transition-all border border-slate-100"
+                            title="แก้ไขข้อมูลฟอร์ม"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </Link>
+
+                          <button
+                            onClick={() => handleDelete(survey.id, survey.status)}
+                            className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-500 hover:text-rose-700 rounded-lg transition-all"
+                            title="ลบแบบสำรวจนี้"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </main>
+
+      {/* Summary View Modal (Narrative report format as requested) */}
+      {selectedSurvey && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="bg-slate-100 px-6 py-4 flex items-center justify-between border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-slate-900 text-base">รายงานสรุปข้อความแบบสำรวจความต้องการหน้างาน</h3>
+              </div>
+              <button 
+                onClick={() => setSelectedSurvey(null)}
+                className="text-slate-500 hover:text-slate-800 p-1 hover:bg-slate-200 rounded"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto space-y-5 text-sm">
+              {/* Copy Report Button */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 p-3.5 rounded-xl border border-slate-200 gap-2">
+                <span className="text-xs text-slate-500 font-medium">คุณสามารถคัดลอกสรุปข้อความรายงานนี้เพื่อแชร์ลงกลุ่ม LINE หรือส่งทางอีเมลได้ทันที</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const textReport = generateTextSummary(selectedSurvey);
+                    navigator.clipboard.writeText(textReport);
+                    setCopySuccess(true);
+                    setTimeout(() => setCopySuccess(false), 2000);
+                  }}
+                  className={`px-4 py-2 text-xs font-bold rounded-xl transition shadow-xs flex items-center gap-1.5 shrink-0 w-full sm:w-auto justify-center ${
+                    copySuccess 
+                      ? 'bg-emerald-600 text-white' 
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
+                >
+                  {copySuccess ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      คัดลอกสำเร็จ!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      คัดลอกข้อความสรุปทั้งหมด
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Text narrative container */}
+              <div className="bg-slate-900 text-slate-100 p-5 rounded-2xl font-mono text-xs overflow-x-auto max-h-[40vh] border border-slate-800 shadow-inner">
+                <pre className="whitespace-pre-wrap">{generateTextSummary(selectedSurvey)}</pre>
+              </div>
+
+              {/* drawings gallery with download for drawing viewer */}
+              {(() => {
+                const modalDrawings: { id: string; roomName: string; step: number; annotatedImage: string; description: string }[] = [];
+                (selectedSurvey.existingImages || []).forEach((img: any) => {
+                  modalDrawings.push({ id: img.id, roomName: 'อาคาร / หน้าห้อง', step: 1, annotatedImage: img.annotatedImage, description: img.description });
+                });
+                (selectedSurvey.roomsData || []).forEach((room: any) => {
+                  (room.images || []).forEach((img: any) => {
+                    modalDrawings.push({ id: img.id, roomName: room.name, step: img.step, annotatedImage: img.annotatedImage, description: img.description });
+                  });
+                });
+
+                return modalDrawings.length > 0 ? (
+                  <div className="pt-4 border-t border-slate-200 space-y-3">
+                    <h4 className="font-bold text-slate-900 text-sm">คลังรูปวาดและเส้นบอกระยะ ({modalDrawings.length} รูป)</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      {modalDrawings.map((draw, idx) => (
+                        <div key={draw.id} className="border border-slate-200 bg-slate-55 p-2.5 rounded-xl flex flex-col justify-between shadow-3xs">
+                          <div>
+                            <div className="relative w-full h-28 border border-slate-200 bg-slate-100 rounded-lg overflow-hidden flex items-center justify-center">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={draw.annotatedImage} alt={`Drawing thumbnail ${idx}`} className="object-cover w-full h-full" />
+                            </div>
+                            <p className="font-bold text-blue-900 text-xs mt-1.5">{draw.roomName} <span className="text-slate-400 font-normal">| ขั้นที่ {draw.step}</span></p>
+                            {draw.description && <p className="text-[11px] text-slate-500 mt-0.5">{draw.description}</p>}
+                          </div>
+                          <a
+                            href={draw.annotatedImage}
+                            download={`sws_drawing_${draw.roomName.replace(/\s+/g, '_')}_step${draw.step}_${idx}.png`}
+                            className="w-full mt-2 bg-blue-50 text-blue-650 hover:bg-blue-100 text-[10px] font-bold py-1.5 rounded-lg text-center flex items-center justify-center gap-1 transition"
+                          >
+                            <Download className="w-3 h-3" />
+                            ดาวน์โหลดรูปวาด
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+            </div>
+            
+            <div className="bg-slate-55 px-6 py-4 flex justify-end border-t border-slate-200">
+              <button
+                onClick={() => setSelectedSurvey(null)}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-350 text-slate-700 text-xs font-semibold rounded-lg transition"
+              >
+                ปิดหน้าต่าง
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+
+  function renderStatusBadge(status: string) {
+    switch (status) {
+      case 'completed':
+      case 'synced':
+        return (
+          <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[11px] font-bold px-2 py-0.5 rounded-full border border-emerald-100">
+            <CheckCircle2 className="w-3 h-3" />
+            สร้างเอกสารสำเร็จ
+          </span>
+        );
+      case 'generating':
+        return (
+          <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-[11px] font-bold px-2 py-0.5 rounded-full border border-blue-100">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            กำลังสร้าง Docs/PDF
+          </span>
+        );
+      case 'pending_sync':
+        return (
+          <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 text-[11px] font-bold px-2 py-0.5 rounded-full border border-amber-100">
+            <RefreshCw className="w-3 h-3 animate-pulse" />
+            ค้างซิงค์ (ออฟไลน์)
+          </span>
+        );
+      case 'draft':
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 bg-slate-105 text-slate-700 text-[11px] font-bold px-2 py-0.5 rounded-full border border-slate-200">
+            <FileText className="w-3 h-3" />
+            แบบร่างในเครื่อง
+          </span>
+        );
+    }
+  }
+}
+
+function generateTextSummary(survey: any) {
+  let text = '';
+  text += `==========================================\n`;
+  text += `   รายงานสรุปแบบสำรวจความต้องการหน้างาน (SWS)\n`;
+  text += `==========================================\n\n`;
+  
+  text += `[ข้อมูลโครงการทั่วไป]\n`;
+  text += `- โครงการ: ${survey.projectName || '-'}\n`;
+  text += `- ลูกค้า: ${survey.customerName || '-'}\n`;
+  text += `- ผู้สำรวจ: ${survey.salesPersonName || '-'}\n`;
+  text += `- งบประมาณโครงการประมาณการ: ${survey.budget ? Number(survey.budget).toLocaleString() + ' บาท' : '-'}\n`;
+  text += `- วันที่แจ้งสเปค: ${survey.requestDate || '-'}\n`;
+  text += `- วันที่สำรวจหน้างาน: ${survey.surveyDate || '-'}\n`;
+  text += `- เสนอราคาภายใน: ${survey.quotationDeadline || '-'}\n`;
+  text += `- ผู้ประสานงานหน้างาน: ${survey.contactName || '-'} (โทร: ${survey.contactPhone || '-'})\n`;
+  if (survey.locationAddress) {
+    text += `- สถานที่ปักหมุด: ${survey.locationAddress} (พิกัด Lat/Lng: ${survey.locationLat?.toFixed(5)}, ${survey.locationLng?.toFixed(5)})\n`;
+  }
+  text += `- รูปอาคาร/หน้าห้องที่แนบ: ${(survey.existingImages || []).length} รูป\n\n`;
+
+  (survey.roomsData || []).forEach((room: any, idx: number) => {
+    text += `[จุดที่ ${idx + 1}: ${room.name}]\n`;
+    text += `- ชนิดห้อง: ${room.roomType || '-'} (ชั้น ${room.floor || '-'})\n`;
+    text += `- มิติห้อง (กว้าง x ลึก x สูง): ${room.roomWidth || '-'} x ${room.roomLength || '-'} x ${room.roomHeight || '-'} เมตร\n`;
+    text += `- การติดตั้งจอหลัก: รูปแบบการยึด ${room.installationType || '-'}, พื้นผิวผนัง ${room.surfaceType || '-'}, ผู้เตรียมโครงสร้าง ${room.structureResponsibility || '-'}\n`;
+    text += `- ระบบสายและเมนไฟ: ระยะจอไปห้องควบคุม ${room.distanceToControlRoom || '-'} เมตร, ผู้เดินสายสัญญาณ ${room.cablingResponsibility || '-'}, ผู้เตรียมไฟเมน ${room.mainPowerResponsibility || '-'}\n`;
+    text += `- ตู้แร็คระบบ: ตำแหน่งวาง ${room.rackLocation || '-'}, ผู้เตรียมตู้ ${room.rackResponsibility || '-'}, ผู้จ่ายไฟแร็ค ${room.rackPowerSource || '-'}\n`;
+    text += `- Wall Plate: ชนิด ${room.wallPlateType || '-'}, การเดินสาย ${room.wallPlateWiring || '-'}, ตำแหน่ง ${room.wallPlateLocation || '-'}\n`;
+    
+    text += `- ระบบภาพ (Visual Systems):\n`;
+    if (room.ledWidth && room.ledHeight) {
+      text += `  * จอ LED หลัก: ขนาด ${room.ledWidth} x ${room.ledHeight} เมตร (Pixel Pitch: ${room.ledPixelPitch || '-'} | ยี่ห้อ: ${room.ledModelName || '-'} | ทรงจอ: ${room.ledType || '-'} | substrate: ${room.ledSubstrate || '-'} | ลักษณะงาน: ${room.ledApplication || '-'})\n`;
+    } else {
+      text += `  * จอ LED หลัก: ไม่ได้ระบุความต้องการ\n`;
+    }
+    const portsList = (room.inputPorts || []).map((p: any) => `${p.portType} x ${p.portQty}`).join(', ');
+    text += `  * พอร์ตเชื่อมต่อจอหลัก: ${portsList || 'ไม่มีข้อมูล'}\n`;
+    
+    if (room.visualOthersEnabled) {
+      if (room.visualOthersEnabled.interactive) {
+        text += `  * Interactive Board: ขนาด ${room.interactiveSize || '-'} นิ้ว x ${room.interactiveQty || 0} เครื่อง (ยี่ห้อ: ${room.interactiveBrand || '-'})\n`;
+      }
+      if (room.visualOthersEnabled.projector) {
+        text += `  * เครื่องฉาย Projector: ความสว่าง ${room.projectorLumen || '-'} lumens x ${room.projectorQty || 0} เครื่อง (ยี่ห้อ: ${room.projectorBrand || '-'})\n`;
+      }
+      if (room.visualOthersEnabled.sideDisplay) {
+        text += `  * จอเสริมกลาง/ข้างห้อง: ประเภท ${room.sideDisplayType || '-'} x ${room.sideDisplayQty || 0} จอ (แสดงผล: ${room.sideDisplayDiffImage || '-'})\n`;
+      }
+      if (room.visualOthersEnabled.ptzCamera) {
+        text += `  * กล้อง PTZ Camera: จำนวน ${room.ptzQty || 0} ตัว (ยี่ห้อ: ${room.ptzBrand || '-'} | Auto-Tracking: ${room.ptzTracking || '-'})\n`;
+      }
+      if (room.visualOthersEnabled.signage) {
+        text += `  * ป้าย Digital Signage: ขนาด ${room.signageSize || '-'} นิ้ว x ${room.signageQty || 0} เครื่อง (ยี่ห้อ: ${room.signageBrand || '-'})\n`;
+      }
+    }
+    if (room.visualNote) {
+      text += `  * หมายเหตุภาพเพิ่มเติม: ${room.visualNote}\n`;
+    }
+    
+    text += `- ระบบเสียง (Audio Systems):\n`;
+    if (room.micWiredQty) text += `  * ไมค์สาย: ${room.micWiredQty} ตัว (ยี่ห้อ: ${room.micWiredBrand || '-'})\n`;
+    if (room.micWirelessHandQty) text += `  * ไมค์ถือไร้สาย: ${room.micWirelessHandQty} ตัว (ยี่ห้อ: ${room.micWirelessHandBrand || '-'})\n`;
+    if (room.micWirelessLapelQty) text += `  * ไมค์หนีบปกเสื้อ: ${room.micWirelessLapelQty} ตัว (ยี่ห้อ: ${room.micWirelessLapelBrand || '-'})\n`;
+    text += `  * รูปแบบลำโพง: ${room.speakerType || '-'} (ยี่ห้อ: ${room.speakerBrand || '-'})\n`;
+    if (room.allInOneQty) {
+      text += `  * ชุด All-in-one Video Conference: ${room.allInOneQty} ชุด (แชร์แบบ: ${room.allInOneWirelessType || '-'} | ยี่ห้อ: ${room.allInOneBrand || '-'} | Platform: ${room.vdoConferencePlatform || '-'})\n`;
+    }
+    if (room.tabletopChairmanQty || room.tabletopDelegateQty) {
+      text += `  * ชุดไมค์ประชุมตั้งโต๊ะ: Chairman ${room.tabletopChairmanQty || 0} ตัว / Delegate ${room.tabletopDelegateQty || 0} ตัว (ระบบ: ${room.tabletopType || '-'} | ยี่ห้อ: ${room.tabletopBrand || '-'} | ฟีเจอร์พิเศษ: ${room.tabletopSpecialFeatures || '-'})\n`;
+    }
+    if (room.audioNote) {
+      text += `  * หมายเหตุเสียงเพิ่มเติม: ${room.audioNote}\n`;
+    }
+
+    text += `- ระบบควบคุมกลาง & เครือข่าย (Control & Network):\n`;
+    text += `  * ระบบควบคุม: คุมระบบ ${room.controlType || '-'} (สั่งการผ่าน: ${room.controlInterface || '-'} | iPad: ${room.controlIpadStatus || '-'} | หมายเหตุ: ${room.controlNote || '-'})\n`;
+    text += `  * IT Network: เชื่อมต่อด้วย ${room.networkInterface || '-'} (IP Allocation: ${room.networkIPRequirement || '-'} | ผู้รับผิดชอบเตรียมสายเน็ต: ${room.networkResponsibility || '-'} | หมายเหตุ: ${room.networkNote || '-'})\n`;
+    text += `- แนบรูปภาพประกอบห้องนี้: ${(room.images || []).length} รูป\n\n`;
+  });
+
+  text += `==========================================\n`;
+  text += `               สิ้นสุดรายงานสรุป\n`;
+  text += `==========================================\n`;
+  return text;
 }
