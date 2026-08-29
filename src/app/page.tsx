@@ -221,55 +221,10 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 pb-12">
+    <div className="pb-12 animate-fade-in">
       
-      {/* Header Banner */}
-      <header className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white shadow-md">
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-tight">Survey System</h1>
-              <p className="text-blue-100 mt-1.5 text-sm">ระบบแบบฟอร์มสำรวจหน้างานอัจฉริยะ (Smart Site Survey Wizard)</p>
-            </div>
-            
-            <div className="flex items-center gap-3">
-              <div className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold ${
-                isOnline ? 'bg-emerald-500/20 text-emerald-200' : 'bg-rose-500/20 text-rose-200'
-              }`}>
-                {isOnline ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
-                {isOnline ? 'ออนไลน์' : 'ออฟไลน์'}
-              </div>
-
-              {currentUser && (
-                <div className="text-right hidden sm:block">
-                  <p className="text-xs font-bold text-white">{currentUser.name}</p>
-                  <p className="text-[10px] text-blue-200">{currentUser.position}</p>
-                </div>
-              )}
-
-              <Link 
-                href="/master"
-                className="bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-4 py-2 rounded-xl border border-white/20 flex items-center gap-1.5 transition"
-              >
-                <Database className="w-4 h-4" />
-                ตั้งค่าข้อมูลหลัก
-              </Link>
-
-              <button
-                onClick={handleLogout}
-                className="bg-rose-500/20 hover:bg-rose-500/35 text-rose-200 text-xs font-semibold px-4 py-2 rounded-xl border border-rose-500/30 flex items-center gap-1.5 transition"
-                title="ออกจากระบบ"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden md:inline">ออกจากระบบ</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* Main Section */}
-      <main className="max-w-6xl mx-auto px-4 mt-8">
+      <div className="max-w-6xl mx-auto">
 
         {/* Sync Failure Warning Banner */}
         {syncError && (
@@ -333,13 +288,13 @@ export default function Dashboard() {
               placeholder="ค้นหาชื่อโปรเจกต์ หรือชื่อลูกค้า..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm"
+              className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5]/20 focus:border-[#4f46e5] text-sm"
             />
           </div>
 
           <Link
             href="/survey/new"
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm py-2 px-5 rounded-xl flex items-center justify-center gap-1.5 transition shadow-md"
+            className="bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] hover:bg-gradient-to-r from-[#4338ca] to-[#6d28d9] text-white font-bold text-sm py-2 px-5 rounded-xl flex items-center justify-center gap-1.5 transition shadow-md"
           >
             <Plus className="w-4 h-4" />
             เพิ่มแบบสำรวจใหม่
@@ -355,7 +310,7 @@ export default function Dashboard() {
 
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 text-slate-500">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-2" />
+              <Loader2 className="w-8 h-8 animate-spin text-[#4f46e5] mb-2" />
               <p className="text-sm">กำลังดึงข้อมูลแบบสำรวจ...</p>
             </div>
           ) : filteredSurveys.length === 0 ? (
@@ -411,7 +366,7 @@ export default function Dashboard() {
                             rel="noopener noreferrer"
                             className={`p-2 rounded-lg transition-all ${
                               survey.docUrl 
-                                ? 'bg-blue-50 text-blue-600 hover:bg-blue-100' 
+                                ? 'bg-[#4f46e5]/10 text-[#4f46e5] hover:bg-[#4f46e5]/20' 
                                 : 'bg-slate-100 text-slate-300 cursor-not-allowed'
                             }`}
                             onClick={(e) => !survey.docUrl && e.preventDefault()}
@@ -468,7 +423,7 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-      </main>
+      </div>
 
       {/* Summary View Modal (Narrative report format as requested) */}
       {selectedSurvey && (
@@ -476,7 +431,7 @@ export default function Dashboard() {
           <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
             <div className="bg-slate-100 px-6 py-4 flex items-center justify-between border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-blue-600" />
+                <FileText className="w-5 h-5 text-[#4f46e5]" />
                 <h3 className="font-bold text-slate-900 text-base">รายงานสรุปข้อความแบบสำรวจความต้องการหน้างาน</h3>
               </div>
               <button 
@@ -502,7 +457,7 @@ export default function Dashboard() {
                   className={`px-4 py-2 text-xs font-bold rounded-xl transition shadow-xs flex items-center gap-1.5 shrink-0 w-full sm:w-auto justify-center ${
                     copySuccess 
                       ? 'bg-emerald-600 text-white' 
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white hover:bg-gradient-to-r from-[#4338ca] to-[#6d28d9]'
                   }`}
                 >
                   {copySuccess ? (
@@ -553,7 +508,7 @@ export default function Dashboard() {
                           <a
                             href={draw.annotatedImage}
                             download={`sws_drawing_${draw.roomName.replace(/\s+/g, '_')}_step${draw.step}_${idx}.png`}
-                            className="w-full mt-2 bg-blue-50 text-blue-650 hover:bg-blue-100 text-[10px] font-bold py-1.5 rounded-lg text-center flex items-center justify-center gap-1 transition"
+                            className="w-full mt-2 bg-[#4f46e5]/10 text-blue-650 hover:bg-[#4f46e5]/20 text-[10px] font-bold py-1.5 rounded-lg text-center flex items-center justify-center gap-1 transition"
                           >
                             <Download className="w-3 h-3" />
                             ดาวน์โหลดรูปวาด
@@ -592,7 +547,7 @@ export default function Dashboard() {
         );
       case 'generating':
         return (
-          <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-[11px] font-bold px-2 py-0.5 rounded-full border border-blue-100">
+          <span className="inline-flex items-center gap-1 bg-[#4f46e5]/10 text-[#4338ca] text-[11px] font-bold px-2 py-0.5 rounded-full border border-[#4f46e5]/20">
             <Loader2 className="w-3 h-3 animate-spin" />
             กำลังสร้าง Docs/PDF
           </span>

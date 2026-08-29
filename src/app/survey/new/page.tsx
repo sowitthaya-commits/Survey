@@ -656,7 +656,7 @@ function SurveyWizardForm() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
+        <Loader2 className="w-10 h-10 animate-spin text-[#4f46e5]" />
       </div>
     );
   }
@@ -674,7 +674,7 @@ function SurveyWizardForm() {
             }}
             className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
               activeRoomIndex === idx 
-                ? 'bg-white text-blue-600 shadow-xs border border-slate-200' 
+                ? 'bg-white text-[#4f46e5] shadow-xs border border-slate-200' 
                 : 'text-slate-650 hover:bg-slate-200'
             }`}
           >
@@ -695,7 +695,7 @@ function SurveyWizardForm() {
       <button
         type="button"
         onClick={addRoomTab}
-        className="px-3.5 py-2 text-xs font-bold bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 flex items-center gap-1 transition"
+        className="px-3.5 py-2 text-xs font-bold bg-[#4f46e5]/10 text-[#4f46e5] rounded-lg hover:bg-[#4f46e5]/20 flex items-center gap-1 transition"
       >
         <Plus className="w-3.5 h-3.5" />
         เพิ่มห้อง/จุดติดตั้ง
@@ -717,31 +717,9 @@ function SurveyWizardForm() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 pb-20">
-      
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="p-2 hover:bg-slate-100 rounded-lg text-slate-655 transition">
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <h1 className="text-sm sm:text-base font-bold text-slate-900">
-              {editId ? 'แก้ไขข้อมูลแบบสำรวจ SWS' : 'แบบสำรวจความต้องการภาพและเสียง SWS'}
-            </h1>
-          </div>
-
-          <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-            isOnline ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
-          }`}>
-            {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
-            {isOnline ? 'ออนไลน์' : 'ออฟไลน์'}
-          </div>
-        </div>
-      </header>
-
+    <div className="pb-20 animate-fade-in">
       {/* Stepper progress (6 Steps) */}
-      <main className="max-w-4xl mx-auto px-4 mt-6">
+      <div className="max-w-4xl mx-auto">
         
         {/* Sync Failure Error Banner */}
         {syncError && (
@@ -765,7 +743,7 @@ function SurveyWizardForm() {
           <div className="flex justify-between items-center relative">
             <div className="absolute left-4 right-4 h-0.5 bg-slate-200 top-1/2 -translate-y-1/2 z-0" />
             <div 
-              className="absolute left-4 h-0.5 bg-blue-600 top-1/2 -translate-y-1/2 z-0 transition-all duration-300" 
+              className="absolute left-4 h-0.5 bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] top-1/2 -translate-y-1/2 z-0 transition-all duration-300" 
               style={{ width: `${((currentStep - 1) / 5) * 100}%` }}
             />
             
@@ -790,7 +768,7 @@ function SurveyWizardForm() {
               >
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition ${
                   currentStep === s.step 
-                    ? 'bg-blue-600 text-white ring-4 ring-blue-500/20' 
+                    ? 'bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white ring-4 ring-[#4f46e5]/20' 
                     : currentStep > s.step 
                       ? 'bg-emerald-600 text-white' 
                       : 'bg-white border-2 border-slate-300 text-slate-500 hover:border-slate-400'
@@ -829,7 +807,7 @@ function SurveyWizardForm() {
                     value={projectName}
                     onChange={(e) => setProjectName(e.target.value)}
                     placeholder="เช่น ปรับปรุงห้องบอร์ดบริหารชั้น 8"
-                    className="w-full px-3.5 py-2.5 border border-slate-250 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm font-semibold"
+                    className="w-full px-3.5 py-2.5 border border-slate-250 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5]/20 focus:border-[#4f46e5] text-sm font-semibold"
                     required
                   />
                 </div>
@@ -904,7 +882,7 @@ function SurveyWizardForm() {
                   <button
                     type="button"
                     onClick={getCurrentGPSLocation}
-                    className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold rounded-lg flex items-center gap-1 transition"
+                    className="px-3 py-1.5 bg-[#4f46e5]/10 hover:bg-[#4f46e5]/20 text-[#4f46e5] text-xs font-bold rounded-lg flex items-center gap-1 transition"
                   >
                     <MapPin className="w-3.5 h-3.5" />
                     ดึงพิกัดจาก GPS เครื่อง
@@ -951,7 +929,7 @@ function SurveyWizardForm() {
               </div>
 
               {/* Building/Entrance Photos */}
-              <div className="pt-6 border-t border-slate-100 bg-blue-50/40 p-5 rounded-2xl space-y-4">
+              <div className="pt-6 border-t border-slate-100 bg-[#4f46e5]/10/40 p-5 rounded-2xl space-y-4">
                 <h3 className="font-bold text-blue-900 text-sm flex items-center gap-1.5">
                   <ImageIcon className="w-4.5 h-4.5" />
                   รูปอาคาร / รูปหน้าห้อง
@@ -1077,7 +1055,7 @@ function SurveyWizardForm() {
 
                 {/* Structure details */}
                 <div className="border border-slate-100 rounded-xl p-4 bg-slate-50/50 space-y-4">
-                  <span className="block text-xs font-bold text-slate-700 uppercase tracking-wider text-blue-700">การจัดวางโครงสร้างและผู้เตรียม</span>
+                  <span className="block text-xs font-bold text-slate-700 uppercase tracking-wider text-[#4338ca]">การจัดวางโครงสร้างและผู้เตรียม</span>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-xs text-slate-655 mb-1">ลักษณะการติดตั้ง</label>
@@ -1262,7 +1240,7 @@ function SurveyWizardForm() {
               {renderRoomTabs()}
 
               <div className="space-y-6">
-                <div className="border border-slate-150 rounded-xl p-4 bg-blue-50/10 space-y-4">
+                <div className="border border-slate-150 rounded-xl p-4 bg-[#4f46e5]/10/10 space-y-4">
                   <span className="block text-xs font-bold text-blue-900 uppercase">จอหลัก (LED Display Specs) สำหรับ {currentRoom.name}</span>
                   <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                     <div>
@@ -1367,7 +1345,7 @@ function SurveyWizardForm() {
                           type="checkbox"
                           checked={!!currentRoom.visualOthersEnabled?.[item.key as keyof typeof currentRoom.visualOthersEnabled]}
                           onChange={(e) => updateVisualOthersEnabled(activeRoomIndex, item.key, e.target.checked)}
-                          className="w-4 h-4 text-blue-600 rounded"
+                          className="w-4 h-4 text-[#4f46e5] rounded"
                         />
                         {item.label}
                       </label>
@@ -1530,7 +1508,7 @@ function SurveyWizardForm() {
                     <button
                       type="button"
                       onClick={() => addInputPort(activeRoomIndex)}
-                      className="px-3 py-1.5 bg-blue-50 text-blue-650 hover:bg-blue-100 text-xs font-bold rounded-lg flex items-center gap-1 transition"
+                      className="px-3 py-1.5 bg-[#4f46e5]/10 text-blue-650 hover:bg-[#4f46e5]/20 text-xs font-bold rounded-lg flex items-center gap-1 transition"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       + เพิ่มชนิดพอร์ตใหม่
@@ -1722,7 +1700,7 @@ function SurveyWizardForm() {
                 </div>
 
                 {/* Tabletop mic conference */}
-                <div className="border border-slate-150 rounded-xl p-4 bg-blue-50/5 space-y-3">
+                <div className="border border-slate-150 rounded-xl p-4 bg-[#4f46e5]/10/5 space-y-3">
                   <span className="block text-xs font-bold text-slate-800">ชุดประชุมไมค์ตั้งโต๊ะ (Tabletop Conference Mics)</span>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -1972,7 +1950,7 @@ function SurveyWizardForm() {
                   </div>
                   <div className="flex justify-between md:justify-start gap-4">
                     <span className="text-slate-400 w-24">งบประมาณ:</span>
-                    <span className="font-bold text-blue-750">{budget ? `${Number(budget).toLocaleString()} บาท` : '-'}</span>
+                    <span className="font-bold text-[#4338ca]">{budget ? `${Number(budget).toLocaleString()} บาท` : '-'}</span>
                   </div>
                   <div className="flex justify-between md:justify-start gap-4">
                     <span className="text-slate-400 w-24">ผู้ทำแบบสำรวจ:</span>
@@ -1999,7 +1977,7 @@ function SurveyWizardForm() {
                 </div>
 
                 {/* Project-wide customer photos count */}
-                <div className="bg-blue-50/40 p-4 rounded-xl space-y-2 border border-blue-100">
+                <div className="bg-[#4f46e5]/10/40 p-4 rounded-xl space-y-2 border border-[#4f46e5]/20">
                   <h4 className="font-bold text-blue-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
                     <Info className="w-4 h-4" /> รูปภาพอาคารและหน้าห้องที่สำรวจ
                   </h4>
@@ -2130,7 +2108,7 @@ function SurveyWizardForm() {
                             {room.allInOneQty ? (
                               <>
                                 <p className="text-[11px]"><span className="text-slate-400">ชนิดแชร์ระบบ:</span> <span className="font-medium">{room.allInOneWirelessType || '-'} (ยี่ห้อ: {room.allInOneBrand || '-'})</span></p>
-                                <p className="text-[11px]"><span className="text-slate-400">VDO Platform:</span> <span className="font-medium text-blue-700">{room.vdoConferencePlatform || '-'}</span></p>
+                                <p className="text-[11px]"><span className="text-slate-400">VDO Platform:</span> <span className="font-medium text-[#4338ca]">{room.vdoConferencePlatform || '-'}</span></p>
                               </>
                             ) : null}
                           </div>
@@ -2193,7 +2171,7 @@ function SurveyWizardForm() {
                           <a
                             href={draw.annotatedImage}
                             download={`sws_drawing_${draw.roomName.replace(/\s+/g, '_')}_step${draw.step}_${idx}.png`}
-                            className="w-full mt-3 bg-blue-50 text-blue-650 hover:bg-blue-100 text-xs font-bold py-2 rounded-lg text-center flex items-center justify-center gap-1 transition"
+                            className="w-full mt-3 bg-[#4f46e5]/10 text-blue-650 hover:bg-[#4f46e5]/20 text-xs font-bold py-2 rounded-lg text-center flex items-center justify-center gap-1 transition"
                           >
                             <Download className="w-3.5 h-3.5" />
                             ดาวน์โหลดรูปวาดระยะ
@@ -2231,7 +2209,7 @@ function SurveyWizardForm() {
               <button
                 type="button"
                 onClick={nextStep}
-                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold flex items-center gap-1.5 transition text-sm shadow-sm"
+                className="px-5 py-2.5 bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] hover:bg-gradient-to-r from-[#4338ca] to-[#6d28d9] text-white rounded-xl font-semibold flex items-center gap-1.5 transition text-sm shadow-sm"
               >
                 ขั้นตอนต่อไป
                 <ArrowRight className="w-4 h-4" />
@@ -2258,7 +2236,7 @@ function SurveyWizardForm() {
             )}
           </div>
         </div>
-      </main>
+      </div>
 
       {/* Fullscreen Modal overlay for Image Annotation */}
       {annotatingRoomIndex !== null && annotatingImageId !== null && annotatingImageSrc && (
@@ -2380,7 +2358,7 @@ export default function SurveyWizardPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-[#4f46e5]" />
       </div>
     }>
       <SurveyWizardForm />

@@ -251,39 +251,24 @@ export default function MasterDataPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800">
-      {/* Navbar / Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="p-2 hover:bg-slate-100 rounded-lg text-slate-650 transition">
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <h1 className="text-xl font-bold text-slate-900">จัดการข้อมูลระบบ (Master Data)</h1>
-          </div>
-          <Link href="/" className="text-sm text-blue-600 hover:underline">
-            กลับหน้า Dashboard
-          </Link>
+    <div className="pb-12 animate-fade-in">
+      {/* Status Toast */}
+      {statusMessage && (
+        <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white font-medium transition-all duration-300 ${
+          statusMessage.type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'
+        }`}>
+          {statusMessage.text}
         </div>
-      </header>
+      )}
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* Status Toast */}
-        {statusMessage && (
-          <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white font-medium transition-all duration-300 ${
-            statusMessage.type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'
-          }`}>
-            {statusMessage.text}
-          </div>
-        )}
-
+      <div className="max-w-6xl mx-auto">
         {/* Tab Switching */}
         <div className="flex border-b border-slate-200 mb-8 bg-white p-1 rounded-xl shadow-sm max-w-lg">
           <button
             onClick={() => setActiveTab('sales')}
             className={`flex-1 text-center py-2.5 rounded-lg font-semibold text-xs transition-all ${
               activeTab === 'sales'
-                ? 'bg-blue-600 text-white shadow-sm'
+                ? 'bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white shadow-sm'
                 : 'text-slate-600 hover:bg-slate-50'
             }`}
           >
@@ -293,7 +278,7 @@ export default function MasterDataPage() {
             onClick={() => setActiveTab('displays')}
             className={`flex-1 text-center py-2.5 rounded-lg font-semibold text-xs transition-all ${
               activeTab === 'displays'
-                ? 'bg-blue-600 text-white shadow-sm'
+                ? 'bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white shadow-sm'
                 : 'text-slate-600 hover:bg-slate-50'
             }`}
           >
@@ -303,7 +288,7 @@ export default function MasterDataPage() {
             onClick={() => setActiveTab('options')}
             className={`flex-1 text-center py-2.5 rounded-lg font-semibold text-xs transition-all flex items-center justify-center gap-1 ${
               activeTab === 'options'
-                ? 'bg-blue-600 text-white shadow-sm'
+                ? 'bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white shadow-sm'
                 : 'text-slate-600 hover:bg-slate-50'
             }`}
           >
@@ -314,7 +299,7 @@ export default function MasterDataPage() {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-500">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-2" />
+            <Loader2 className="w-8 h-8 animate-spin text-[#4f46e5] mb-2" />
             <p>กำลังโหลดข้อมูล...</p>
           </div>
         ) : (
@@ -339,7 +324,7 @@ export default function MasterDataPage() {
                       value={salesName}
                       onChange={(e) => setSalesName(e.target.value)}
                       placeholder="เช่น สมชาย ใจดี"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4f46e5]/20 focus:border-[#4f46e5] transition text-sm"
                       required
                     />
                   </div>
@@ -350,7 +335,7 @@ export default function MasterDataPage() {
                       value={salesEmail}
                       onChange={(e) => setSalesEmail(e.target.value)}
                       placeholder="เช่น somchai@company.com"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4f46e5]/20 focus:border-[#4f46e5] transition text-sm"
                     />
                   </div>
                   <div>
@@ -360,13 +345,13 @@ export default function MasterDataPage() {
                       value={salesPhone}
                       onChange={(e) => setSalesPhone(e.target.value)}
                       placeholder="เช่น 081-234-5678"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4f46e5]/20 focus:border-[#4f46e5] transition text-sm"
                     />
                   </div>
                   <div className="pt-2 flex gap-2">
                     <button
                       type="submit"
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-4 rounded-lg flex items-center justify-center gap-1.5 transition"
+                      className="flex-1 bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] hover:bg-gradient-to-r from-[#4338ca] to-[#6d28d9] text-white text-sm font-semibold py-2 px-4 rounded-lg flex items-center justify-center gap-1.5 transition"
                     >
                       {editingSalesId ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                       {editingSalesId ? 'บันทึกการแก้ไข' : 'เพิ่มรายชื่อ'}
@@ -395,7 +380,7 @@ export default function MasterDataPage() {
                       value={modelName}
                       onChange={(e) => setModelName(e.target.value)}
                       placeholder="เช่น QM55B, FW-65BZ30L"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4f46e5]/20 focus:border-[#4f46e5] transition text-sm"
                       required
                     />
                   </div>
@@ -408,7 +393,7 @@ export default function MasterDataPage() {
                       value={brand}
                       onChange={(e) => setBrand(e.target.value)}
                       placeholder="เช่น Samsung, Sony, LG"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4f46e5]/20 focus:border-[#4f46e5] transition text-sm"
                       required
                     />
                   </div>
@@ -419,13 +404,13 @@ export default function MasterDataPage() {
                       onChange={(e) => setSpecifications(e.target.value)}
                       placeholder="เช่น 55 นิ้ว 4K UHD, ความสว่าง 500 nits"
                       rows={3}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm resize-none"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4f46e5]/20 focus:border-[#4f46e5] transition text-sm resize-none"
                     />
                   </div>
                   <div className="pt-2 flex gap-2">
                     <button
                       type="submit"
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-4 rounded-lg flex items-center justify-center gap-1.5 transition"
+                      className="flex-1 bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] hover:bg-gradient-to-r from-[#4338ca] to-[#6d28d9] text-white text-sm font-semibold py-2 px-4 rounded-lg flex items-center justify-center gap-1.5 transition"
                     >
                       {editingModelId ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                       {editingModelId ? 'บันทึกการแก้ไข' : 'เพิ่มข้อมูลจอ'}
@@ -475,7 +460,7 @@ export default function MasterDataPage() {
                   <div className="pt-2">
                     <button
                       type="submit"
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-4 rounded-lg flex items-center justify-center gap-1.5 transition"
+                      className="w-full bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] hover:bg-gradient-to-r from-[#4338ca] to-[#6d28d9] text-white text-sm font-semibold py-2 px-4 rounded-lg flex items-center justify-center gap-1.5 transition"
                     >
                       <Plus className="w-4 h-4" />
                       เพิ่มตัวเลือก
@@ -516,7 +501,7 @@ export default function MasterDataPage() {
                             <td className="py-3.5 px-4 text-right flex justify-end gap-1.5">
                               <button
                                 onClick={() => startEditSales(sp)}
-                                className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                className="p-1.5 text-slate-500 hover:text-[#4f46e5] hover:bg-[#4f46e5]/10 rounded-lg transition"
                                 title="แก้ไข"
                               >
                                 <Edit className="w-4 h-4" />
@@ -560,7 +545,7 @@ export default function MasterDataPage() {
                             <td className="py-3.5 px-4 text-right flex justify-end gap-1.5">
                               <button
                                 onClick={() => startEditModel(dm)}
-                                className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                className="p-1.5 text-slate-500 hover:text-[#4f46e5] hover:bg-[#4f46e5]/10 rounded-lg transition"
                                 title="แก้ไข"
                               >
                                 <Edit className="w-4 h-4" />
@@ -600,7 +585,7 @@ export default function MasterDataPage() {
                         <tbody>
                           {paginatedOptions.map((opt) => (
                             <tr key={opt.id} className="border-b border-slate-100 hover:bg-slate-50/40 transition">
-                              <td className="py-3.5 px-4 font-semibold text-blue-700">{CATEGORY_MAP[opt.category] || opt.category}</td>
+                              <td className="py-3.5 px-4 font-semibold text-[#4338ca]">{CATEGORY_MAP[opt.category] || opt.category}</td>
                               <td className="py-3.5 px-4 text-slate-900 font-medium">{opt.value}</td>
                               <td className="py-3.5 px-4 text-right flex justify-end gap-1.5">
                                 <button
@@ -646,7 +631,7 @@ export default function MasterDataPage() {
             </div>
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }
