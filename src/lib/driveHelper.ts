@@ -2,6 +2,7 @@ import { google } from 'googleapis';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import os from 'os';
 
 const IMAGE_FOLDER_ID = '133P6jxYlZ0ixXPhuYwFQ8tjbNCATEnFT'; // User's image folder ID
 
@@ -98,11 +99,8 @@ export async function uploadFileToDrive(
   try {
     const drive = google.drive({ version: 'v3', auth });
 
-    // Temp file path to stream from
-    const tempDir = path.join(process.cwd(), 'tmp');
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
+    // Temp file path in writeable OS temporary folder (prevents serverless write errors)
+    const tempDir = os.tmpdir();
     const tempFilePath = path.join(tempDir, fileName);
     fs.writeFileSync(tempFilePath, buffer);
 
@@ -125,7 +123,11 @@ export async function uploadFileToDrive(
 
     // Delete temp file
     if (fs.existsSync(tempFilePath)) {
-      fs.unlinkSync(tempFilePath);
+      try {
+        fs.unlinkSync(tempFilePath);
+      } catch (unlinkErr) {
+        console.warn('Failed to clean up temp file:', unlinkErr);
+      }
     }
 
     const fileId = response.data.id;
@@ -154,12 +156,17 @@ export async function uploadFileToDrive(
   } catch (error) {
     console.error('Error uploading file to Google Drive:', error);
     // If google drive upload fails, fall back to local as fallback safety
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', surveyId);
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    try {
+      const uploadDir = path.join(process.cwd(), 'public', 'uploads', surveyId);
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      const localPath = path.join(uploadDir, fileName);
+      fs.writeFileSync(localPath, buffer);
+      return `/uploads/${surveyId}/${fileName}`;
+    } catch (writeErr) {
+      console.warn('Failed to write locally during error fallback (read-only filesystem):', writeErr);
+      return base64Str; // Return base64 directly so the UI still displays it
     }
-    const localPath = path.join(uploadDir, fileName);
-    fs.writeFileSync(localPath, buffer);
-    return `/uploads/${surveyId}/${fileName}`;
   }
 }
