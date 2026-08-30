@@ -362,36 +362,44 @@ export default function Dashboard() {
                             <Eye className="w-4 h-4" />
                           </button>
 
-                          <a
-                            href={survey.docUrl || '#'}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`p-2 rounded-lg transition-all ${
-                              survey.docUrl 
-                                ? 'bg-[#4f46e5]/10 text-[#4f46e5] hover:bg-[#4f46e5]/20' 
-                                : 'bg-slate-100 text-slate-300 cursor-not-allowed'
-                            }`}
-                            onClick={(e) => !survey.docUrl && e.preventDefault()}
-                            title="ลิงก์ Google Docs เอกสารสรุป"
-                          >
-                            <FileText className="w-4 h-4" />
-                          </a>
+                          {(() => {
+                            const isRealDoc = !!(survey.docUrl && (survey.docUrl.includes('spreadsheets/d/') || survey.docUrl.includes('drive.google.com/')));
+                            const isRealPdf = !!(survey.pdfUrl && survey.pdfUrl.includes('drive.google.com/'));
+                            
+                            return (
+                              <>
+                                <a
+                                  href={isRealDoc ? survey.docUrl! : '#'}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={`p-2 rounded-lg transition-all ${
+                                    isRealDoc 
+                                      ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' 
+                                      : 'bg-slate-100 text-slate-300 cursor-not-allowed'
+                                  }`}
+                                  onClick={(e) => !isRealDoc && e.preventDefault()}
+                                  title={isRealDoc ? "ลิงก์ Google Sheets เอกสารสรุป" : "ยังไม่ได้สร้างสเปรดชีตสรุป (กรุณากดแก้ไขและกดบันทึกสร้างรายงาน)"}
+                                >
+                                  <FileText className="w-4 h-4" />
+                                </a>
 
-                          <a
-                            href={survey.pdfUrl || '#'}
-                            download
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`p-2 rounded-lg transition-all ${
-                              survey.pdfUrl 
-                                ? 'bg-amber-50 text-amber-600 hover:bg-amber-100' 
-                                : 'bg-slate-100 text-slate-300 cursor-not-allowed'
-                            }`}
-                            onClick={(e) => !survey.pdfUrl && e.preventDefault()}
-                            title="ดาวน์โหลดสรุปเป็น PDF"
-                          >
-                            <Download className="w-4 h-4" />
-                          </a>
+                                <a
+                                  href={isRealPdf ? survey.pdfUrl! : '#'}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={`p-2 rounded-lg transition-all ${
+                                    isRealPdf 
+                                      ? 'bg-amber-50 text-amber-600 hover:bg-amber-100' 
+                                      : 'bg-slate-100 text-slate-300 cursor-not-allowed'
+                                  }`}
+                                  onClick={(e) => !isRealPdf && e.preventDefault()}
+                                  title={isRealPdf ? "ดาวน์โหลดสรุปเป็น PDF" : "ยังไม่ได้สร้าง PDF รายงาน (กรุณากดแก้ไขและกดบันทึกสร้างรายงาน)"}
+                                >
+                                  <Download className="w-4 h-4" />
+                                </a>
+                              </>
+                            );
+                          })()}
 
                           <button
                             onClick={() => handleClone(survey)}
