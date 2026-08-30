@@ -267,3 +267,61 @@ function doPost(e) {
     })).setMimeType(ContentService.MimeType.JSON);
   }
 }
+
+/**
+ * ฟังก์ชันสำหรับกดรันเพื่อทดสอบใน Apps Script Editor
+ * สามารถคลิกเลือกฟังก์ชันนี้แล้วกดปุ่ม "เรียกใช้ (Run)" เพื่อดูบันทึกข้อความ (Logs) และประมวลผลดูจุดติดขัดได้ทันที
+ */
+function testCreateReport() {
+  const e = {
+    postData: {
+      contents: JSON.stringify({
+        action: 'createReport',
+        projectName: 'โครงการทดสอบ A',
+        customerName: 'บริษัท ทดสอบ จำกัด',
+        budget: '500000',
+        salesPersonName: 'ผู้สำรวจทดสอบ',
+        surveyDate: '2026-08-30',
+        requestDate: '2026-08-29',
+        quotationDeadline: '2026-09-05',
+        contactName: 'คุณทดสอบ',
+        contactPhone: '0812345678',
+        locationAddress: 'หน้างานทดสอบ กรุงเทพฯ',
+        locationLat: 13.75,
+        locationLng: 100.5,
+        roomsData: [
+          {
+            name: 'ห้องทดสอบที่ 1',
+            floor: '3',
+            roomWidth: 5,
+            roomLength: 8,
+            roomHeight: 3,
+            installationType: 'ติดผนัง',
+            surfaceType: 'ผนังปูน',
+            structureResponsibility: 'SWS จัดเตรียม',
+            cablingResponsibility: 'SWS จัดเตรียม',
+            mainPowerResponsibility: 'ลูกค้าจัดเตรียม',
+            distanceToControlRoom: 10,
+            rackLocation: 'ภายในห้องประชุม',
+            rackResponsibility: 'SWS จัดเตรียม',
+            rackPowerSource: 'SWS จัดเตรียม',
+            wallPlateWiring: 'เดินฝัง',
+            wallPlateType: 'HDMI Wall Plate',
+            wallPlateLocation: 'ใต้จอ',
+            ledWidth: 3,
+            ledHeight: 2,
+            ledPixelPitch: 'P1.86',
+            ledType: 'Flat',
+            ledSubstrate: 'SMD',
+            ledApplication: 'ห้องประชุม'
+          }
+        ]
+      })
+    }
+  };
+  
+  console.log('--- STARTING testCreateReport ---');
+  const result = doPost(e);
+  console.log('Result Object: ' + result.getContent());
+  console.log('--- COMPLETED testCreateReport ---');
+}
