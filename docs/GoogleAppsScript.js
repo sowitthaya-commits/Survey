@@ -17,7 +17,7 @@
 // --- CONFIGURATION ---
 const IMAGE_FOLDER_ID = '1b8IaUy9U1Ykd8IubEs0w_d206kXRoVHM'; // โฟลเดอร์เก็บรูปภาพ
 const DOCUMENT_FOLDER_ID = '1UkCIccul_XH6o1wQ7orjrJc0ozrBa-ws'; // โฟลเดอร์เก็บเอกสารสรุป/Sheets
-const TEMPLATE_DOC_ID = '1UkCIccul_XH6o1wQ7orjrJc0ozrBa-ws'; // สามารถใช้ไฟล์เดียวกันเป็น Template หรือกำหนด ID Google Doc Template ของท่าน
+const TEMPLATE_DOC_ID = '1R9jp0ft4gyw-_RpEvDYSF0jX0cLkttsAxyYGH4JboAY'; // ID ของ Google Sheet Template ที่ใช้งาน
 
 function doPost(e) {
   try {
