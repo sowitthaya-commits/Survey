@@ -313,21 +313,9 @@ function doPost(e) {
                 // Fast TextFinder replacements in place
                 replacePlaceholdersInSheet(clonedSheet, room);
 
-                // Replace image placeholders or default to B10/H10
-                const hasImage1Placeholder = clonedSheet.createTextFinder('{{IMAGE_1}}').findNext() !== null;
-                const hasImage2Placeholder = clonedSheet.createTextFinder('{{IMAGE_2}}').findNext() !== null;
-
-                if (hasImage1Placeholder) {
-                  clonedSheet.createTextFinder('{{IMAGE_1}}').replaceAllWith(url1 ? '=IMAGE("' + url1 + '")' : '');
-                } else if (url1) {
-                  clonedSheet.getRange(10, 2).setValue('=IMAGE("' + url1 + '")'); // Col B, Row 10
-                }
-
-                if (hasImage2Placeholder) {
-                  clonedSheet.createTextFinder('{{IMAGE_2}}').replaceAllWith(url2 ? '=IMAGE("' + url2 + '")' : '');
-                } else if (url2) {
-                  clonedSheet.getRange(10, 8).setValue('=IMAGE("' + url2 + '")'); // Col H, Row 10
-                }
+                // Replace image placeholders
+                clonedSheet.createTextFinder('{{IMAGE_1}}').replaceAllWith(url1 ? '=IMAGE("' + url1 + '")' : '');
+                clonedSheet.createTextFinder('{{IMAGE_2}}').replaceAllWith(url2 ? '=IMAGE("' + url2 + '")' : '');
               }
               sheetsToDelete.push(sheet);
             } else {
