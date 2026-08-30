@@ -238,8 +238,12 @@ function doPost(e) {
         const pdfBlob = newDocFile.getAs('application/pdf');
         const newPdfFile = targetFolder.createFile(pdfBlob);
         
-        newDocFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.EDIT);
-        newPdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        try {
+          newDocFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.EDIT);
+          newPdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        } catch (shareErr) {
+          console.warn("Could not set sharing permissions (corporate domain policy restriction): " + shareErr.toString());
+        }
         
         docUrl = newDocFile.getUrl();
         pdfUrl = newPdfFile.getUrl();
