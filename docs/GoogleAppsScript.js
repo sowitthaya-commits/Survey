@@ -64,11 +64,168 @@ function doPost(e) {
         
         if (mimeType === MimeType.GOOGLE_SHEETS || mimeType === 'application/vnd.google-apps.spreadsheet') {
           const ss = SpreadsheetApp.openById(newDocFile.getId());
-          ss.createTextFinder('{{PROJECT_NAME}}').replaceAllWith(projectName);
-          ss.createTextFinder('{{CUSTOMER_NAME}}').replaceAllWith(customerName);
-          ss.createTextFinder('{{BUDGET}}').replaceAllWith(postData.budget ? Number(postData.budget).toLocaleString() + ' บาท' : '-');
-          ss.createTextFinder('{{SALES_PERSON}}').replaceAllWith(postData.salesPersonName || '-');
-          ss.createTextFinder('{{SURVEY_DATE}}').replaceAllWith(postData.surveyDate || '-');
+          
+          // --- TAB 1: Project Info ---
+          const sheet1 = ss.getSheetByName("1");
+          if (sheet1) {
+            sheet1.createTextFinder('{{PROJECT_NAME}}').replaceAllWith(projectName);
+            sheet1.createTextFinder('{{CUSTOMER_NAME}}').replaceAllWith(customerName);
+            sheet1.createTextFinder('{{BUDGET}}').replaceAllWith(postData.budget ? Number(postData.budget).toLocaleString() + ' บาท' : '-');
+            sheet1.createTextFinder('{{SALES_PERSON}}').replaceAllWith(postData.salesPersonName || '-');
+            sheet1.createTextFinder('{{SURVEY_DATE}}').replaceAllWith(postData.surveyDate || '-');
+            sheet1.createTextFinder('{{REQUEST_DATE}}').replaceAllWith(postData.requestDate || '-');
+            sheet1.createTextFinder('{{QUOTATION_DEADLINE}}').replaceAllWith(postData.quotationDeadline || '-');
+            sheet1.createTextFinder('{{CONTACT_NAME}}').replaceAllWith(postData.contactName || '-');
+            sheet1.createTextFinder('{{CONTACT_PHONE}}').replaceAllWith(postData.contactPhone || '-');
+            sheet1.createTextFinder('{{LOCATION_ADDRESS}}').replaceAllWith(postData.locationAddress || '-');
+            sheet1.createTextFinder('{{LOCATION_LAT}}').replaceAllWith(postData.locationLat ? String(postData.locationLat) : '-');
+            sheet1.createTextFinder('{{LOCATION_LNG}}').replaceAllWith(postData.locationLng ? String(postData.locationLng) : '-');
+          }
+          
+          const rooms = postData.roomsData || [];
+          
+          // Helper to process a sheet tab with room rows
+          const processRoomSheet = (sheetName, replaceFn) => {
+            const sheet = ss.getSheetByName(sheetName);
+            if (!sheet) return;
+            
+            // Find the template row containing {{ROOM_NAME}}
+            const lastRow = sheet.getLastRow();
+            const lastCol = sheet.getLastColumn();
+            if (lastRow === 0 || lastCol === 0) return;
+            
+            const values = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+            let templateRowIdx = -1;
+            for (let r = 0; r < lastRow; r++) {
+              for (let c = 0; c < lastCol; c++) {
+                if (String(values[r][c]).includes('{{ROOM_NAME}}')) {
+                  templateRowIdx = r + 1; // 1-indexed
+                  break;
+                }
+              }
+              if (templateRowIdx !== -1) break;
+            }
+            
+            if (templateRowIdx === -1) return; // No template row found
+            
+            // Copy template row formulas/values
+            const templateRange = sheet.getRange(templateRowIdx, 1, 1, lastCol);
+            const templateFormulas = templateRange.getFormulas()[0];
+            const templateValues = templateRange.getValues()[0];
+            
+            // We write the rooms data below the template row
+            for (let i = 0; i < rooms.length; i++) {
+              const targetRowIdx = templateRowIdx + i + 1;
+              sheet.insertRowAfter(targetRowIdx - 1);
+              
+              // Copy formats from template row
+              templateRange.copyTo(sheet.getRange(targetRowIdx, 1, 1, lastCol), SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
+              
+              // Build values for target row
+              const rowValues = [];
+              for (let c = 0; c < lastCol; c++) {
+                let cellText = templateFormulas[c] || templateValues[c];
+                if (typeof cellText === 'string') {
+                  cellText = replaceFn(cellText, rooms[i]);
+                }
+                rowValues.push(cellText);
+              }
+              
+              sheet.getRange(targetRowIdx, 1, 1, lastCol).setValues([rowValues]);
+            }
+            
+            // Delete the template row
+            sheet.deleteRow(templateRowIdx);
+          };
+          
+          // --- TAB 2: Room structure specs ---
+          processRoomSheet("2", (text, room) => {
+            return text
+              .replace(/\{\{ROOM_NAME\}\}/g, room.name || '')
+              .replace(/\{\{ROOM_FLOOR\}\}/g, room.floor || '')
+              .replace(/\{\{ROOM_WIDTH\}\}/g, room.roomWidth ? String(room.roomWidth) : '-')
+              .replace(/\{\{ROOM_LENGTH\}\}/g, room.roomLength ? String(room.roomLength) : '-')
+              .replace(/\{\{ROOM_HEIGHT\}\}/g, room.roomHeight ? String(room.roomHeight) : '-')
+              .replace(/\{\{INSTALLATION_TYPE\}\}/g, room.installationType || '-')
+              .replace(/\{\{SURFACE_TYPE\}\}/g, room.surfaceType || '-')
+              .replace(/\{\{STRUCTURE_RESP\}\}/g, room.structureResponsibility || '-')
+              .replace(/\{\{CABLING_RESP\}\}/g, room.cablingResponsibility || '-')
+              .replace(/\{\{POWER_RESP\}\}/g, room.mainPowerResponsibility || '-')
+              .replace(/\{\{DISTANCE_CONTROL\}\}/g, room.distanceToControlRoom ? String(room.distanceToControlRoom) : '-')
+              .replace(/\{\{RACK_LOCATION\}\}/g, room.rackLocation || '-')
+              .replace(/\{\{RACK_RESP\}\}/g, room.rackResponsibility || '-')
+              .replace(/\{\{RACK_POWER_RESP\}\}/g, room.rackPowerSource || '-')
+              .replace(/\{\{WALL_PLATE_WIRING\}\}/g, room.wallPlateWiring || '-')
+              .replace(/\{\{WALL_PLATE_TYPE\}\}/g, room.wallPlateType || '-')
+              .replace(/\{\{WALL_PLATE_LOC\}\}/g, room.wallPlateLocation || '-');
+          });
+          
+          // --- TAB 3: Display specs ---
+          processRoomSheet("3", (text, room) => {
+            return text
+              .replace(/\{\{ROOM_NAME\}\}/g, room.name || '')
+              .replace(/\{\{LED_WIDTH\}\}/g, room.ledWidth ? String(room.ledWidth) : '-')
+              .replace(/\{\{LED_HEIGHT\}\}/g, room.ledHeight ? String(room.ledHeight) : '-')
+              .replace(/\{\{LED_PITCH\}\}/g, room.ledPixelPitch || '-')
+              .replace(/\{\{LED_TYPE\}\}/g, room.ledType || '-')
+              .replace(/\{\{LED_SUBSTRATE\}\}/g, room.ledSubstrate || '-')
+              .replace(/\{\{LED_APPLICATION\}\}/g, room.ledApplication || '-')
+              .replace(/\{\{INTERACTIVE_QTY\}\}/g, room.interactiveQty ? String(room.interactiveQty) : '-')
+              .replace(/\{\{INTERACTIVE_SIZE\}\}/g, room.interactiveSize ? String(room.interactiveSize) : '-')
+              .replace(/\{\{INTERACTIVE_BRAND\}\}/g, room.interactiveBrand || '-')
+              .replace(/\{\{PROJECTOR_QTY\}\}/g, room.projectorQty ? String(room.projectorQty) : '-')
+              .replace(/\{\{PROJECTOR_LUMEN\}\}/g, room.projectorLumen ? String(room.projectorLumen) : '-')
+              .replace(/\{\{PROJECTOR_BRAND\}\}/g, room.projectorBrand || '-')
+              .replace(/\{\{SIDE_DISPLAY_TYPE\}\}/g, room.sideDisplayType || '-')
+              .replace(/\{\{SIDE_DISPLAY_QTY\}\}/g, room.sideDisplayQty ? String(room.sideDisplayQty) : '-')
+              .replace(/\{\{SIDE_DISPLAY_IMAGE\}\}/g, room.sideDisplayDiffImage || '-')
+              .replace(/\{\{PTZ_QTY\}\}/g, room.ptzQty ? String(room.ptzQty) : '-')
+              .replace(/\{\{PTZ_TRACKING\}\}/g, room.ptzTracking || '-')
+              .replace(/\{\{PTZ_BRAND\}\}/g, room.ptzBrand || '-')
+              .replace(/\{\{SIGNAGE_QTY\}\}/g, room.signageQty ? String(room.signageQty) : '-')
+              .replace(/\{\{SIGNAGE_SIZE\}\}/g, room.signageSize ? String(room.signageSize) : '-')
+              .replace(/\{\{SIGNAGE_BRAND\}\}/g, room.signageBrand || '-')
+              .replace(/\{\{VISUAL_NOTE\}\}/g, room.visualNote || '-');
+          });
+          
+          // --- TAB 4: Audio specs ---
+          processRoomSheet("4", (text, room) => {
+            return text
+              .replace(/\{\{ROOM_NAME\}\}/g, room.name || '')
+              .replace(/\{\{MIC_WIRED_QTY\}\}/g, room.micWiredQty ? String(room.micWiredQty) : '-')
+              .replace(/\{\{MIC_WIRED_BRAND\}\}/g, room.micWiredBrand || '-')
+              .replace(/\{\{MIC_HAND_QTY\}\}/g, room.micWirelessHandQty ? String(room.micWirelessHandQty) : '-')
+              .replace(/\{\{MIC_HAND_BRAND\}\}/g, room.micWirelessHandBrand || '-')
+              .replace(/\{\{MIC_LAPEL_QTY\}\}/g, room.micWirelessLapelQty ? String(room.micWirelessLapelQty) : '-')
+              .replace(/\{\{MIC_LAPEL_BRAND\}\}/g, room.micWirelessLapelBrand || '-')
+              .replace(/\{\{SPEAKER_TYPE\}\}/g, room.speakerType || '-')
+              .replace(/\{\{SPEAKER_BRAND\}\}/g, room.speakerBrand || '-')
+              .replace(/\{\{AIO_QTY\}\}/g, room.allInOneQty ? String(room.allInOneQty) : '-')
+              .replace(/\{\{AIO_WIRELESS_TYPE\}\}/g, room.allInOneWirelessType || '-')
+              .replace(/\{\{AIO_BRAND\}\}/g, room.allInOneBrand || '-')
+              .replace(/\{\{VDO_PLATFORM\}\}/g, room.vdoConferencePlatform || '-')
+              .replace(/\{\{TABLETOP_CHAIRMAN\}\}/g, room.tabletopChairmanQty ? String(room.tabletopChairmanQty) : '-')
+              .replace(/\{\{TABLETOP_DELEGATE\}\}/g, room.tabletopDelegateQty ? String(room.tabletopDelegateQty) : '-')
+              .replace(/\{\{TABLETOP_TYPE\}\}/g, room.tabletopType || '-')
+              .replace(/\{\{TABLETOP_BRAND\}\}/g, room.tabletopBrand || '-')
+              .replace(/\{\{TABLETOP_SPECIAL\}\}/g, room.tabletopSpecialFeatures || '-')
+              .replace(/\{\{AUDIO_NOTE\}\}/g, room.audioNote || '-');
+          });
+          
+          // --- TAB 5: Control & Network specs ---
+          processRoomSheet("5", (text, room) => {
+            return text
+              .replace(/\{\{ROOM_NAME\}\}/g, room.name || '')
+              .replace(/\{\{CONTROL_TYPE\}\}/g, room.controlType || '-')
+              .replace(/\{\{CONTROL_INTERFACE\}\}/g, room.controlInterface || '-')
+              .replace(/\{\{CONTROL_IPAD\}\}/g, room.controlIpadStatus || '-')
+              .replace(/\{\{CONTROL_NOTE\}\}/g, room.controlNote || '-')
+              .replace(/\{\{NETWORK_INTERFACE\}\}/g, room.networkInterface || '-')
+              .replace(/\{\{NETWORK_IP\}\}/g, room.networkIPRequirement || '-')
+              .replace(/\{\{NETWORK_RESP\}\}/g, room.networkResponsibility || '-')
+              .replace(/\{\{NETWORK_NOTE\}\}/g, room.networkNote || '-');
+          });
+          
           SpreadsheetApp.flush();
         } else {
           const doc = DocumentApp.openById(newDocFile.getId());
