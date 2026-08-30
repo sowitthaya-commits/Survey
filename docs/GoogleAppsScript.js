@@ -62,15 +62,20 @@ function doPost(e) {
         const mimeType = templateFile.getMimeType();
         const newDocFile = templateFile.makeCopy('รายงานการสำรวจ - ' + projectName + ' (' + customerName + ')', targetFolder);
         
-        if (mimeType === MimeType.GOOGLE_SHEETS || mimeType === 'application/vnd.google-apps.spreadsheet') {
+        if (mimeType.indexOf('spreadsheet') !== -1) {
           const ss = SpreadsheetApp.openById(newDocFile.getId());
           
           // --- TAB 1: Project Info ---
           const sheet1 = ss.getSheetByName("1");
           if (sheet1) {
+            const budgetVal = postData.budget || '';
+            const cleanBudget = String(budgetVal).replace(/[^0-9.]/g, '');
+            const parsedBudget = cleanBudget ? Number(cleanBudget) : NaN;
+            const budgetText = !isNaN(parsedBudget) ? parsedBudget.toLocaleString() + ' บาท' : (budgetVal || '-');
+
             sheet1.createTextFinder('{{PROJECT_NAME}}').replaceAllWith(projectName);
             sheet1.createTextFinder('{{CUSTOMER_NAME}}').replaceAllWith(customerName);
-            sheet1.createTextFinder('{{BUDGET}}').replaceAllWith(postData.budget ? Number(postData.budget).toLocaleString() + ' บาท' : '-');
+            sheet1.createTextFinder('{{BUDGET}}').replaceAllWith(budgetText);
             sheet1.createTextFinder('{{SALES_PERSON}}').replaceAllWith(postData.salesPersonName || '-');
             sheet1.createTextFinder('{{SURVEY_DATE}}').replaceAllWith(postData.surveyDate || '-');
             sheet1.createTextFinder('{{REQUEST_DATE}}').replaceAllWith(postData.requestDate || '-');
@@ -250,33 +255,8 @@ function doPost(e) {
         docUrl = newDocFile.getUrl();
         pdfUrl = newPdfFile.getUrl();
       } catch (docErr) {
-        // Fallback: หากหา Template ไม่เจอ ให้สร้างไฟล์ Google Doc ใหม่ขึ้นมาในโฟลเดอร์โดยตรง
-        const newDoc = DocumentApp.create('รายงานการสำรวจ - ' + projectName + ' (' + customerName + ')');
-        const fileId = newDoc.getId();
-        
-        // ย้ายไฟล์เข้าโฟลเดอร์เป้าหมาย
-        const file = DriveApp.getFileById(fileId);
-        targetFolder.addFile(file);
-        DriveApp.getRootFolder().removeFile(file);
-        
-        const body = newDoc.getBody();
-        body.appendParagraph('รายงานสรุปแบบสำรวจความต้องการหน้างาน (SWS)\n').setHeading(DocumentApp.ParagraphHeading.HEADING1);
-        body.appendParagraph('ชื่อโครงการ: ' + projectName);
-        body.appendParagraph('ชื่อลูกค้า: ' + customerName);
-        body.appendParagraph('งบประมาณประมาณการ: ' + (postData.budget ? Number(postData.budget).toLocaleString() + ' บาท' : '-'));
-        body.appendParagraph('ผู้สำรวจ: ' + (postData.salesPersonName || '-'));
-        body.appendParagraph('วันที่เข้าสำรวจ: ' + (postData.surveyDate || '-'));
-        
-        newDoc.saveAndClose();
-        
-        const pdfBlob = file.getAs('application/pdf');
-        const newPdfFile = targetFolder.createFile(pdfBlob);
-        
-        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.EDIT);
-        newPdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-        
-        docUrl = file.getUrl();
-        pdfUrl = newPdfFile.getUrl();
+        console.error("Error generating spreadsheet report: " + docErr.toString() + "\n" + docErr.stack);
+        throw new Error("ล้มเหลวในการเขียนข้อมูลลง Google Sheets Template: " + docErr.toString());
       }
       
       return ContentService.createTextOutput(JSON.stringify({
