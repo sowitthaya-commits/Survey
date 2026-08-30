@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { db } from '@/db';
 import { surveys, salesPersons } from '@/db/schema';
 import { eq, like, or } from 'drizzle-orm';
@@ -139,6 +139,7 @@ export async function POST(request: Request) {
           existingImages: existingImagesString,
           roomsData: roomsDataString,
           updatedAt: now,
+          status: 'generating',
         })
         .where(eq(surveys.id, id));
     } else {
@@ -155,79 +156,88 @@ export async function POST(request: Request) {
         });
     }
 
-    // Google Docs Folder mapping: 1UkCIccul_XH6o1wQ7orjrJc0ozrBa-ws
-    let docUrl = `https://docs.google.com/document/d/${uuidv4().substring(0, 16)}/edit?usp=drivesdk`;
-    let pdfUrl = `/uploads/${id}/survey_report_${id.substring(0, 8)}.pdf`;
+    // Trigger Apps Script and PDF creation asynchronously in the background
+    after(async () => {
+      let docUrl = null;
+      let pdfUrl = null;
 
-    const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
-    if (scriptUrl) {
-      try {
-        console.log('Requesting Google Apps Script Web App to create report...');
-        const response = await fetch(scriptUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'createReport',
-            projectName: surveyData.projectName || body.projectName,
-            customerName: surveyData.customerName || body.customerName,
-            budget: surveyData.budget || body.budget,
-            salesPersonName: salesPersonName || body.salesPersonName,
-            surveyDate: surveyData.surveyDate || body.surveyDate,
-            requestDate: surveyData.requestDate || body.requestDate,
-            quotationDeadline: surveyData.quotationDeadline || body.quotationDeadline,
-            contactName: surveyData.contactName || body.contactName,
-            contactPhone: surveyData.contactPhone || body.contactPhone,
-            locationAddress: surveyData.locationAddress || body.locationAddress,
-            locationLat: surveyData.locationLat || body.locationLat,
-            locationLng: surveyData.locationLng || body.locationLng,
-            roomsData: rooms,
-            id: id
-          })
-        });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            if (data.docUrl) docUrl = data.docUrl;
-            if (data.pdfUrl) pdfUrl = data.pdfUrl;
-            console.log('Apps Script report generated successfully:', { docUrl, pdfUrl });
+      const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
+      if (scriptUrl) {
+        try {
+          console.log('Background: Requesting Google Apps Script Web App to create report...');
+          const response = await fetch(scriptUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'createReport',
+              projectName: surveyData.projectName || body.projectName,
+              customerName: surveyData.customerName || body.customerName,
+              budget: surveyData.budget || body.budget,
+              salesPersonName: salesPersonName || body.salesPersonName,
+              surveyDate: surveyData.surveyDate || body.surveyDate,
+              requestDate: surveyData.requestDate || body.requestDate,
+              quotationDeadline: surveyData.quotationDeadline || body.quotationDeadline,
+              contactName: surveyData.contactName || body.contactName,
+              contactPhone: surveyData.contactPhone || body.contactPhone,
+              locationAddress: surveyData.locationAddress || body.locationAddress,
+              locationLat: surveyData.locationLat || body.locationLat,
+              locationLng: surveyData.locationLng || body.locationLng,
+              roomsData: rooms,
+              id: id
+            })
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+              docUrl = data.docUrl;
+              pdfUrl = data.pdfUrl;
+              console.log('Background: Apps Script report generated successfully:', { docUrl, pdfUrl });
+            } else {
+              console.warn('Background: Apps Script report generation failed:', data.error);
+            }
           } else {
-            console.warn('Apps Script report generation failed:', data.error);
+            console.warn(`Background: Apps Script report HTTP error: ${response.status}`);
           }
-        } else {
-          console.warn(`Apps Script report HTTP error: ${response.status}`);
+        } catch (scriptErr) {
+          console.error('Background: Failed calling Apps Script to create report:', scriptErr);
         }
-      } catch (scriptErr) {
-        console.error('Failed calling Apps Script to create report:', scriptErr);
       }
-    }
 
-    try {
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads', id);
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
+      // If Apps Script failed, fall back to mock links so execution completes
+      const finalDocUrl = docUrl || `https://docs.google.com/document/d/${uuidv4().substring(0, 16)}/edit?usp=drivesdk`;
+      const finalPdfUrl = pdfUrl || `/uploads/${id}/survey_report_${id.substring(0, 8)}.pdf`;
+
+      if (!pdfUrl) {
+        try {
+          const uploadDir = path.join(process.cwd(), 'public', 'uploads', id);
+          if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+          }
+          const pdfPath = path.join(uploadDir, `survey_report_${id.substring(0, 8)}.pdf`);
+          fs.writeFileSync(pdfPath, `%PDF-1.4\n% MOCKED SURVEY REPORT FOR ${surveyData.projectName}\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << >> /Contents 4 0 R >>\nendobj\n4 0 obj\n<< /Length 50 >>\nstream\nBT /F1 12 Tf 70 700 Td (Mock Survey PDF Report for Multi-Room Layout) Tj ET\nendstream\nendobj\nxref\n0 5\n0000000000 65535 f\n0000000009 00000 n\n0000000062 00000 n\n0000000119 00000 n\n0000000216 00000 n\ntrailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n315\n%%EOF`);
+        } catch (fsErr) {
+          console.warn('Background Warning: Could not write mock PDF to local read-only filesystem:', fsErr);
+        }
       }
-      const pdfPath = path.join(uploadDir, `survey_report_${id.substring(0, 8)}.pdf`);
-      fs.writeFileSync(pdfPath, `%PDF-1.4\n% MOCKED SURVEY REPORT FOR ${surveyData.projectName}\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << >> /Contents 4 0 R >>\nendobj\n4 0 obj\n<< /Length 50 >>\nstream\nBT /F1 12 Tf 70 700 Td (Mock Survey PDF Report for Multi-Room Layout) Tj ET\nendstream\nendobj\nxref\n0 5\n0000000000 65535 f\n0000000009 00000 n\n0000000062 00000 n\n0000000119 00000 n\n0000000216 00000 n\ntrailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n315\n%%EOF`);
-    } catch (fsErr) {
-      console.warn('Warning: Could not write mock PDF to local read-only filesystem:', fsErr);
-    }
 
-    // Update survey with URLs and completed status
-    await db.update(surveys)
-      .set({
-        docUrl,
-        pdfUrl,
-        status: 'completed',
-        updatedAt: new Date().toISOString(),
-      })
-      .where(eq(surveys.id, id));
+      // Update survey with URLs and completed status
+      await db.update(surveys)
+        .set({
+          docUrl: finalDocUrl,
+          pdfUrl: finalPdfUrl,
+          status: 'completed',
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(surveys.id, id));
+        
+      console.log('Background: Survey status updated to completed.');
+    });
 
     return NextResponse.json({
       success: true,
       surveyId: id,
-      docUrl,
-      pdfUrl,
-      status: 'completed'
+      status: 'generating'
     });
   } catch (error: any) {
     console.error('Error saving survey:', error);

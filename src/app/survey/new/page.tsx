@@ -674,7 +674,7 @@ function SurveyWizardForm() {
 
         if (res.ok) {
           await offlineDb.draftSurveys.delete(surveyId);
-          alert('บันทึกแบบสำรวจความต้องการและส่งรายงาน Google Drive สำเร็จแล้ว!');
+          alert('บันทึกข้อมูลแบบสำรวจสำเร็จ! ระบบกำลังดำเนินการสร้างเอกสารรายงานบน Google Drive ในเบื้องหลัง');
           router.push('/');
         } else {
           throw new Error('Server error');
@@ -1199,7 +1199,7 @@ function SurveyWizardForm() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                     <div>
                       <label className="block text-xs text-slate-650 mb-1">ลักษณะการเดินสาย Wall plate</label>
                       <select
@@ -1225,16 +1225,6 @@ function SurveyWizardForm() {
                           <option key={opt} value={opt}>{opt}</option>
                         ))}
                       </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs text-slate-650 mb-1">ระบุตำแหน่ง Wall Plate</label>
-                      <input
-                        type="text"
-                        value={currentRoom.wallPlateLocation || ''}
-                        onChange={(e) => updateRoomField(activeRoomIndex, 'wallPlateLocation', e.target.value)}
-                        placeholder="เช่น ใต้จอรับภาพหน้าห้อง"
-                        className="w-full px-3 py-1.5 border border-slate-250 rounded-lg text-xs"
-                      />
                     </div>
                   </div>
                 </div>
@@ -2074,8 +2064,7 @@ function SurveyWizardForm() {
                           <p><span className="text-slate-400">จุดจ่ายไฟแร็ค:</span> <span className="font-semibold">{room.rackPowerSource || '-'}</span></p>
                           
                           <p><span className="text-slate-400">รูปแบบ Wall Plate:</span> <span className="font-medium">{room.wallPlateType || '-'}</span></p>
-                          <p><span className="text-slate-400">การเดินสายเพลท:</span> <span className="font-medium">{room.wallPlateWiring || '-'}</span></p>
-                          <p><span className="text-slate-400">ตำแหน่งเพลท:</span> <span className="font-medium">{room.wallPlateLocation || '-'}</span></p>
+                          <p className="sm:col-span-2"><span className="text-slate-400">การเดินสายเพลท:</span> <span className="font-medium">{room.wallPlateWiring || '-'}</span></p>
                         </div>
                       </div>
 

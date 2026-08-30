@@ -123,7 +123,6 @@ export async function getDropdownOptions() {
     if (list.length === 0) {
       console.log('Seeding default dropdown options into database...');
       const defaults: { category: string; value: string }[] = [
-        ...['Samsung', 'LG', 'Sony', 'Leyard', 'Absen', 'Unilumin'].map(v => ({ category: 'led_brand', value: v })),
         ...['Horion', 'Dahua'].map(v => ({ category: 'interactive_brand', value: v })),
         ...['Epson', 'Panasonic', 'Any'].map(v => ({ category: 'projector_brand', value: v })),
         ...['Sony', 'Canon', 'Aver', 'Telycam'].map(v => ({ category: 'ptz_brand', value: v })),
@@ -131,7 +130,6 @@ export async function getDropdownOptions() {
         ...['Soundvision', 'TOA', 'Sennheiser', 'Audio-Technica', 'Shure', 'JTS'].map(v => ({ category: 'mic_brand', value: v })),
         ...['TOA', 'Yamaha', 'Bose', 'QSC', 'EV'].map(v => ({ category: 'speaker_brand', value: v })),
         ...['TOA', 'Televic', 'Soundvision', 'Bosch', 'Vissonic'].map(v => ({ category: 'tabletop_brand', value: v })),
-        ...['Barco', 'Crestron', 'Kramer'].map(v => ({ category: 'byod_brand', value: v })),
         ...['AVer', 'Logitech'].map(v => ({ category: 'vdo_brand', value: v })),
         ...['ติดผนัง', 'ตั้งจากพื้น', 'แขวนจากเพดาน'].map(v => ({ category: 'installation_type', value: v })),
         ...['ผนังปูน', 'ผนังเบา', 'ผนัง built-in'].map(v => ({ category: 'surface_type', value: v })),

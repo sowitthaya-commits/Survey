@@ -8,7 +8,8 @@ import { syncMasterDataCache } from '@/lib/offlineSyncHelper';
 import { 
   Plus, Search, FileText, Download, Edit2, Trash2, Database, 
   Wifi, WifiOff, RefreshCw, AlertCircle, FileSpreadsheet, Loader2, 
-  CheckCircle2, Eye, Copy, X, MapPin, Monitor, Volume2, ShieldCheck, Image as ImageIcon, Check, LogOut
+  CheckCircle2, Eye, Copy, X, MapPin, Monitor, Volume2, ShieldCheck, Image as ImageIcon, Check, LogOut,
+  HelpCircle, AlertTriangle, XCircle, Info
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
@@ -50,6 +51,26 @@ export default function Dashboard() {
   const [copySuccess, setCopySuccess] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
+  // Custom beautiful popup modal state
+  const [modalConfig, setModalConfig] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'confirm' | 'warning' | 'error' | 'info';
+    onConfirm?: () => void;
+    onCancel?: () => void;
+  } | null>(null);
+
+  const showPopup = (
+    type: 'success' | 'confirm' | 'warning' | 'error' | 'info',
+    title: string,
+    message: string,
+    onConfirm?: () => void,
+    onCancel?: () => void
+  ) => {
+    setModalConfig({ show: true, type, title, message, onConfirm, onCancel });
+  };
+
   useEffect(() => {
     loadAllSurveys();
     
@@ -67,6 +88,17 @@ export default function Dashboard() {
       .catch(err => console.error('Failed to load session:', err));
   }, [isOnline, pendingCount, syncing]);
 
+  // Poll if any survey is generating in the background
+  useEffect(() => {
+    const hasGenerating = surveys.some(s => s.status === 'generating');
+    if (hasGenerating && isOnline) {
+      const interval = setInterval(() => {
+        loadAllSurveys(true); // silent polling
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [surveys, isOnline]);
+
   const handleLogout = async () => {
     if (!confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) return;
     const res = await fetch('/api/auth/logout', { method: 'POST' });
@@ -76,8 +108,8 @@ export default function Dashboard() {
     }
   };
 
-  const loadAllSurveys = async () => {
-    setLoading(true);
+  const loadAllSurveys = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       let serverSurveys: SurveyItem[] = [];
 
@@ -134,7 +166,7 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Error loading surveys:', error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -144,78 +176,93 @@ export default function Dashboard() {
   );
 
   const handleDelete = async (id: string, status: string) => {
-    if (!confirm('คุณต้องการลบข้อมูลแบบสำรวจนี้พร้อมรูปภาพและเอกสารทั้งหมดใช่หรือไม่?')) return;
+    showPopup(
+      'confirm',
+      'ยืนยันการลบข้อมูล',
+      'คุณต้องการลบข้อมูลแบบสำรวจนี้พร้อมรูปภาพและเอกสารทั้งหมดใช่หรือไม่?',
+      async () => {
+        try {
+          if (status === 'draft' || status === 'pending_sync') {
+            await offlineDb.draftSurveys.delete(id);
+            showPopup('success', 'ลบสำเร็จ', 'ลบแบบร่างในเครื่องเรียบร้อยแล้ว');
+          } else {
+            if (!isOnline) {
+              showPopup('error', 'ข้อผิดพลาด', 'คุณไม่สามารถลบข้อมูลบนเซิร์ฟเวอร์ได้ขณะออฟไลน์');
+              return;
+            }
 
-    try {
-      if (status === 'draft' || status === 'pending_sync') {
-        await offlineDb.draftSurveys.delete(id);
-        alert('ลบแบบร่างในเครื่องเรียบร้อยแล้ว');
-      } else {
-        if (!isOnline) {
-          alert('คุณไม่สามารถลบข้อมูลบนเซิร์ฟเวอร์ได้ขณะออฟไลน์');
-          return;
-        }
+            const res = await fetch(`/api/surveys?id=${id}`, {
+              method: 'DELETE',
+            });
 
-        const res = await fetch(`/api/surveys?id=${id}`, {
-          method: 'DELETE',
-        });
-
-        if (res.ok) {
-          alert('ลบข้อมูลจากระบบและ Google Drive เรียบร้อยแล้ว');
-        } else {
-          alert('ไม่สามารถลบข้อมูลจากเซิร์ฟเวอร์ได้');
+            if (res.ok) {
+              showPopup('success', 'ลบสำเร็จ', 'ลบข้อมูลจากระบบและ Google Drive เรียบร้อยแล้ว');
+            } else {
+              showPopup('error', 'ข้อผิดพลาด', 'ไม่สามารถลบข้อมูลจากเซิร์ฟเวอร์ได้');
+            }
+          }
+          loadAllSurveys();
+        } catch (e) {
+          console.error('Error deleting survey:', e);
         }
       }
-      
-      loadAllSurveys();
-    } catch (e) {
-      console.error('Error deleting survey:', e);
-    }
+    );
   };
 
   const handleClone = async (item: SurveyItem) => {
-    if (!confirm(`คุณต้องการคัดลอกแบบสำรวจโครงการ "${item.projectName}" เพื่อนำไปใช้เป็นแม่แบบสำหรับสร้างงานใหม่ใช่หรือไม่?`)) return;
+    showPopup(
+      'confirm',
+      'ยืนยันการโคลนแม่แบบ',
+      `คุณต้องการคัดลอกแบบสำรวจโครงการ "${item.projectName}" เพื่อนำไปใช้เป็นแม่แบบสำหรับสร้างงานใหม่ใช่หรือไม่?`,
+      async () => {
+        try {
+          const newUuid = uuidv4();
+          const now = new Date().toISOString();
 
-    try {
-      const newUuid = uuidv4();
-      const now = new Date().toISOString();
+          const clonedRooms = (item.roomsData || []).map(room => {
+            return {
+              ...room,
+              id: uuidv4(),
+              images: [],
+            };
+          });
 
-      const clonedRooms = (item.roomsData || []).map(room => {
-        return {
-          ...room,
-          id: uuidv4(),
-          images: [],
-        };
-      });
+          const draft: DraftSurvey = {
+            id: newUuid,
+            projectName: '',
+            customerName: '',
+            salesPersonId: item.salesPersonId,
+            status: 'draft',
+            createdAt: now,
+            updatedAt: now,
+            locationLat: item.locationLat,
+            locationLng: item.locationLng,
+            locationAddress: item.locationAddress,
+            existingImages: [],
+            roomsData: clonedRooms,
+          };
 
-      const draft: DraftSurvey = {
-        id: newUuid,
-        projectName: '',
-        customerName: '',
-        salesPersonId: item.salesPersonId,
-        status: 'draft',
-        createdAt: now,
-        updatedAt: now,
-        locationLat: item.locationLat,
-        locationLng: item.locationLng,
-        locationAddress: item.locationAddress,
-        existingImages: [],
-        roomsData: clonedRooms,
-      };
-
-      await offlineDb.draftSurveys.put(draft);
-      
-      alert('คัดลอกแม่แบบสำเร็จ! ระบบจะนำท่านไปยังฟอร์มกรอกข้อมูลลูกค้าโครงการใหม่');
-      router.push(`/survey/new?id=${newUuid}`);
-    } catch (e) {
-      console.error('Error cloning survey:', e);
-      alert('เกิดข้อผิดพลาดในการโคลนข้อมูล');
-    }
+          await offlineDb.draftSurveys.put(draft);
+          
+          showPopup(
+            'success',
+            'คัดลอกแม่แบบสำเร็จ',
+            'คัดลอกแม่แบบสำเร็จ! ระบบจะนำท่านไปยังฟอร์มกรอกข้อมูลลูกค้าโครงการใหม่',
+            () => {
+              router.push(`/survey/new?id=${newUuid}`);
+            }
+          );
+        } catch (e) {
+          console.error('Error cloning survey:', e);
+          showPopup('error', 'ข้อผิดพลาด', 'เกิดข้อผิดพลาดในการโคลนข้อมูล');
+        }
+      }
+    );
   };
 
   const triggerSync = async () => {
     if (!isOnline) {
-      alert('ไม่สามารถซิงค์ได้เนื่องจากสัญญาณออฟไลน์');
+      showPopup('warning', 'คำเตือน', 'ไม่สามารถซิงค์ได้เนื่องจากสัญญาณออฟไลน์');
       return;
     }
     await syncPendingSurveys();
@@ -538,6 +585,75 @@ export default function Dashboard() {
               >
                 ปิดหน้าต่าง
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Popup Modal */}
+      {modalConfig && modalConfig.show && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl border border-slate-100 flex flex-col items-center text-center space-y-4 animate-scaleUp">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+              modalConfig.type === 'success' ? 'bg-emerald-50 text-emerald-600' :
+              modalConfig.type === 'confirm' ? 'bg-indigo-50 text-indigo-600' :
+              modalConfig.type === 'warning' ? 'bg-amber-50 text-amber-600' :
+              modalConfig.type === 'error' ? 'bg-rose-50 text-rose-600' :
+              'bg-blue-50 text-blue-600'
+            }`}>
+              {modalConfig.type === 'success' && <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />}
+              {modalConfig.type === 'confirm' && <HelpCircle className="w-6 h-6 stroke-[2.5]" />}
+              {modalConfig.type === 'warning' && <AlertTriangle className="w-6 h-6 stroke-[2.5]" />}
+              {modalConfig.type === 'error' && <XCircle className="w-6 h-6 stroke-[2.5]" />}
+              {modalConfig.type === 'info' && <Info className="w-6 h-6 stroke-[2.5]" />}
+            </div>
+            
+            <div className="space-y-1">
+              <h3 className="font-bold text-slate-800 text-base">{modalConfig.title}</h3>
+              <p className="text-slate-500 text-xs md:text-sm leading-relaxed">{modalConfig.message}</p>
+            </div>
+
+            <div className="flex gap-2 w-full pt-2">
+              {modalConfig.type === 'confirm' ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModalConfig(null);
+                      if (modalConfig.onCancel) modalConfig.onCancel();
+                    }}
+                    className="flex-1 py-2 px-3 border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-650 text-xs font-semibold transition"
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModalConfig(null);
+                      if (modalConfig.onConfirm) modalConfig.onConfirm();
+                    }}
+                    className="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition shadow-sm"
+                  >
+                    ตกลง
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalConfig(null);
+                    if (modalConfig.onConfirm) modalConfig.onConfirm();
+                  }}
+                  className={`w-full py-2 px-4 text-white rounded-xl text-xs font-bold transition shadow-sm ${
+                    modalConfig.type === 'success' ? 'bg-emerald-600 hover:bg-emerald-700' :
+                    modalConfig.type === 'error' ? 'bg-rose-600 hover:bg-rose-700' :
+                    modalConfig.type === 'warning' ? 'bg-amber-500 hover:bg-amber-600' :
+                    'bg-indigo-600 hover:bg-indigo-700'
+                  }`}
+                >
+                  ตกลง
+                </button>
+              )}
             </div>
           </div>
         </div>

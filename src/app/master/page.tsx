@@ -32,7 +32,6 @@ interface DropdownOption {
 }
 
 const CATEGORY_MAP: Record<string, string> = {
-  led_brand: 'แบรนด์จอ LED หลัก',
   interactive_brand: 'แบรนด์ Interactive Board',
   projector_brand: 'แบรนด์ Projector',
   ptz_brand: 'แบรนด์กล้อง PTZ',
@@ -40,7 +39,6 @@ const CATEGORY_MAP: Record<string, string> = {
   mic_brand: 'แบรนด์ไมโครโฟน',
   speaker_brand: 'แบรนด์ลำโพง',
   tabletop_brand: 'แบรนด์ชุดไมค์ประชุม',
-  byod_brand: 'แบรนด์ระบบไร้สาย (BYOD/BYOM)',
   vdo_brand: 'แบรนด์กล้อง All-in-one VDO Conf',
   installation_type: 'ลักษณะการติดตั้ง (Step 2)',
   surface_type: 'พื้นผิวติดตั้งผนัง (Step 2)',
@@ -85,7 +83,7 @@ export default function MasterDataPage() {
   const [editingModelId, setEditingModelId] = useState<number | null>(null);
 
   // Form states - Options
-  const [optionCategory, setOptionCategory] = useState('led_brand');
+  const [optionCategory, setOptionCategory] = useState('interactive_brand');
   const [optionValue, setOptionValue] = useState('');
   const [optionsPage, setOptionsPage] = useState(1);
   const itemsPerPage = 10;

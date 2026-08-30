@@ -8,12 +8,16 @@ import {
   Plus,
   Database,
   LogOut,
-  Menu,
   Pin,
   Loader2,
   Calendar,
   User,
-  ShieldAlert
+  ShieldAlert,
+  HelpCircle,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Info
 } from 'lucide-react';
 
 export default function LayoutWrapper({ children }: { children: React.ReactNode }) {
@@ -26,6 +30,26 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   // Sidebar expand/collapse states matching workload app
   const [sidebarPinned, setSidebarPinned] = useState(true);
   const [sidebarHovered, setSidebarHovered] = useState(false);
+
+  // Custom beautiful popup modal state
+  const [modalConfig, setModalConfig] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'confirm' | 'warning' | 'error' | 'info';
+    onConfirm?: () => void;
+    onCancel?: () => void;
+  } | null>(null);
+
+  const showPopup = (
+    type: 'success' | 'confirm' | 'warning' | 'error' | 'info',
+    title: string,
+    message: string,
+    onConfirm?: () => void,
+    onCancel?: () => void
+  ) => {
+    setModalConfig({ show: true, type, title, message, onConfirm, onCancel });
+  };
   
   useEffect(() => {
     // Read pinned setting from localStorage
@@ -74,13 +98,19 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   }, [pathname, router]);
 
   const handleLogout = async () => {
-    if (!confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) return;
-    const res = await fetch('/api/auth/logout', { method: 'POST' });
-    if (res.ok) {
-      setCurrentUser(null);
-      router.push('/login');
-      router.refresh();
-    }
+    showPopup(
+      'confirm',
+      'ออกจากระบบ',
+      'คุณต้องการออกจากระบบใช่หรือไม่?',
+      async () => {
+        const res = await fetch('/api/auth/logout', { method: 'POST' });
+        if (res.ok) {
+          setCurrentUser(null);
+          router.push('/login');
+          router.refresh();
+        }
+      }
+    );
   };
 
   if (pathname === '/login') {
@@ -226,14 +256,6 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       <div className="main-wrapper">
         <header className="main-header no-print">
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <button
-              className="btn btn-secondary mobile-menu-toggle md:hidden"
-              onClick={() => setMobileMenuOpen(prev => !prev)}
-              style={{ padding: '0.4rem', borderRadius: 'var(--radius-md)' }}
-              title="เมนู"
-            >
-              <Menu size={18} />
-            </button>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>
               {getPageTitle()}
             </h2>
@@ -248,6 +270,75 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
           {children}
         </main>
       </div>
+
+      {/* Custom Popup Modal */}
+      {modalConfig && modalConfig.show && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl border border-slate-100 flex flex-col items-center text-center space-y-4 animate-scaleUp">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+              modalConfig.type === 'success' ? 'bg-emerald-50 text-emerald-600' :
+              modalConfig.type === 'confirm' ? 'bg-indigo-50 text-indigo-600' :
+              modalConfig.type === 'warning' ? 'bg-amber-50 text-amber-600' :
+              modalConfig.type === 'error' ? 'bg-rose-50 text-rose-600' :
+              'bg-blue-50 text-blue-600'
+            }`}>
+              {modalConfig.type === 'success' && <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />}
+              {modalConfig.type === 'confirm' && <HelpCircle className="w-6 h-6 stroke-[2.5]" />}
+              {modalConfig.type === 'warning' && <AlertTriangle className="w-6 h-6 stroke-[2.5]" />}
+              {modalConfig.type === 'error' && <XCircle className="w-6 h-6 stroke-[2.5]" />}
+              {modalConfig.type === 'info' && <Info className="w-6 h-6 stroke-[2.5]" />}
+            </div>
+            
+            <div className="space-y-1">
+              <h3 className="font-bold text-slate-800 text-base">{modalConfig.title}</h3>
+              <p className="text-slate-500 text-xs md:text-sm leading-relaxed">{modalConfig.message}</p>
+            </div>
+
+            <div className="flex gap-2 w-full pt-2">
+              {modalConfig.type === 'confirm' ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModalConfig(null);
+                      if (modalConfig.onCancel) modalConfig.onCancel();
+                    }}
+                    className="flex-1 py-2 px-3 border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-650 text-xs font-semibold transition"
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModalConfig(null);
+                      if (modalConfig.onConfirm) modalConfig.onConfirm();
+                    }}
+                    className="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition shadow-sm"
+                  >
+                    ตกลง
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalConfig(null);
+                    if (modalConfig.onConfirm) modalConfig.onConfirm();
+                  }}
+                  className={`w-full py-2 px-4 text-white rounded-xl text-xs font-bold transition shadow-sm ${
+                    modalConfig.type === 'success' ? 'bg-emerald-600 hover:bg-emerald-700' :
+                    modalConfig.type === 'error' ? 'bg-rose-600 hover:bg-rose-700' :
+                    modalConfig.type === 'warning' ? 'bg-amber-505 hover:bg-amber-600' :
+                    'bg-indigo-600 hover:bg-indigo-700'
+                  }`}
+                >
+                  ตกลง
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx global>{`
         /* Sidebar slide transitions and styles */
