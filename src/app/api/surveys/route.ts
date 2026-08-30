@@ -168,11 +168,19 @@ export async function POST(request: Request) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: 'createReport',
-            projectName: surveyData.projectName,
-            customerName: surveyData.customerName,
-            budget: surveyData.budget,
-            salesPersonName: salesPersonName,
-            surveyDate: surveyData.surveyDate,
+            projectName: surveyData.projectName || body.projectName,
+            customerName: surveyData.customerName || body.customerName,
+            budget: surveyData.budget || body.budget,
+            salesPersonName: salesPersonName || body.salesPersonName,
+            surveyDate: surveyData.surveyDate || body.surveyDate,
+            requestDate: surveyData.requestDate || body.requestDate,
+            quotationDeadline: surveyData.quotationDeadline || body.quotationDeadline,
+            contactName: surveyData.contactName || body.contactName,
+            contactPhone: surveyData.contactPhone || body.contactPhone,
+            locationAddress: surveyData.locationAddress || body.locationAddress,
+            locationLat: surveyData.locationLat || body.locationLat,
+            locationLng: surveyData.locationLng || body.locationLng,
+            roomsData: rooms,
             id: id
           })
         });
