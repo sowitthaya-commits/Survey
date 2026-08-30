@@ -274,15 +274,27 @@ function doPost(e) {
             const lastCol = sheet.getLastColumn();
             if (lastRow === 0 || lastCol === 0) continue;
             
-            const hasRoomName = sheet.createTextFinder('{{ROOM_NAME}}').findNext() !== null;
-            if (!hasRoomName) continue;
+            // Check if sheet contains ANY room placeholders (including {{ROOM_NAME}})
+            let hasRoomPlaceholders = sheet.createTextFinder('{{ROOM_NAME}}').findNext() !== null;
+            if (!hasRoomPlaceholders) {
+              for (const placeholder of ROOM_PLACEHOLDERS) {
+                if (sheet.createTextFinder(placeholder).findNext() !== null) {
+                  hasRoomPlaceholders = true;
+                  break;
+                }
+              }
+            }
+            
+            if (!hasRoomPlaceholders) continue; // Skip static sheets
 
-            // Check if vertical layout (contains other room placeholders in the sheet)
+            // Check if vertical layout (contains other room placeholders)
             let isVertical = false;
             for (const placeholder of ROOM_PLACEHOLDERS) {
-              if (sheet.createTextFinder(placeholder).findNext() !== null) {
-                isVertical = true;
-                break;
+              if (placeholder !== '{{ROOM_NAME}}') {
+                if (sheet.createTextFinder(placeholder).findNext() !== null) {
+                  isVertical = true;
+                  break;
+                }
               }
             }
 
