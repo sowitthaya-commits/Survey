@@ -313,9 +313,26 @@ function doPost(e) {
                 // Fast TextFinder replacements in place
                 replacePlaceholdersInSheet(clonedSheet, room);
 
-                // Replace image placeholders
-                clonedSheet.createTextFinder('{{IMAGE_1}}').replaceAllWith(url1 ? '=IMAGE("' + url1 + '")' : '');
-                clonedSheet.createTextFinder('{{IMAGE_2}}').replaceAllWith(url2 ? '=IMAGE("' + url2 + '")' : '');
+                // Replace image placeholders using native CellImage (avoids external data warning & "Allow access" banner)
+                const range1 = clonedSheet.createTextFinder('{{IMAGE_1}}').findNext();
+                if (range1) {
+                  if (url1) {
+                    const cellImage1 = SpreadsheetApp.newCellImage().setSourceUrl(url1).build();
+                    range1.setValue(cellImage1);
+                  } else {
+                    range1.setValue('');
+                  }
+                }
+
+                const range2 = clonedSheet.createTextFinder('{{IMAGE_2}}').findNext();
+                if (range2) {
+                  if (url2) {
+                    const cellImage2 = SpreadsheetApp.newCellImage().setSourceUrl(url2).build();
+                    range2.setValue(cellImage2);
+                  } else {
+                    range2.setValue('');
+                  }
+                }
               }
               sheetsToDelete.push(sheet);
             } else {
