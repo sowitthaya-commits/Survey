@@ -170,54 +170,183 @@ function doPost(e) {
               .replace(/\{\{NETWORK_NOTE\}\}/g, room.networkNote || '-');
           };
           
-          // --- 3. Process Dynamic Room Rows in ALL Sheets containing {{ROOM_NAME}} ---
+          // --- 3. Process Dynamic Room Rows or Tab Duplication in ALL Sheets ---
+          const ROOM_PLACEHOLDERS = [
+            '{{ROOM_FLOOR}}', '{{ROOM_WIDTH}}', '{{ROOM_LENGTH}}', '{{ROOM_HEIGHT}}',
+            '{{INSTALLATION_TYPE}}', '{{SURFACE_TYPE}}', '{{STRUCTURE_RESP}}',
+            '{{CABLING_RESP}}', '{{POWER_RESP}}', '{{DISTANCE_CONTROL}}',
+            '{{RACK_LOCATION}}', '{{RACK_RESP}}', '{{RACK_POWER_RESP}}',
+            '{{WALL_PLATE_WIRING}}', '{{WALL_PLATE_TYPE}}', '{{WALL_PLATE_LOC}}',
+            '{{LED_WIDTH}}', '{{LED_HEIGHT}}', '{{LED_PITCH}}', '{{LED_TYPE}}',
+            '{{LED_SUBSTRATE}}', '{{LED_APPLICATION}}', '{{INTERACTIVE_QTY}}',
+            '{{INTERACTIVE_SIZE}}', '{{INTERACTIVE_BRAND}}', '{{PROJECTOR_QTY}}',
+            '{{PROJECTOR_LUMEN}}', '{{PROJECTOR_BRAND}}', '{{SIDE_DISPLAY_TYPE}}',
+            '{{SIDE_DISPLAY_QTY}}', '{{SIDE_DISPLAY_IMAGE}}', '{{PTZ_QTY}}',
+            '{{PTZ_TRACKING}}', '{{PTZ_BRAND}}', '{{SIGNAGE_QTY}}',
+            '{{SIGNAGE_SIZE}}', '{{SIGNAGE_BRAND}}', '{{VISUAL_NOTE}}',
+            '{{MIC_WIRED_QTY}}', '{{MIC_WIRED_BRAND}}', '{{MIC_HAND_QTY}}',
+            '{{MIC_HAND_BRAND}}', '{{MIC_LAPEL_QTY}}', '{{MIC_LAPEL_BRAND}}',
+            '{{SPEAKER_TYPE}}', '{{SPEAKER_BRAND}}', '{{AIO_QTY}}',
+            '{{AIO_WIRELESS_TYPE}}', '{{AIO_BRAND}}', '{{VDO_PLATFORM}}',
+            '{{TABLETOP_CHAIRMAN}}', '{{TABLETOP_DELEGATE}}', '{{TABLETOP_TYPE}}',
+            '{{TABLETOP_BRAND}}', '{{TABLETOP_SPECIAL}}', '{{AUDIO_NOTE}}',
+            '{{CONTROL_TYPE}}', '{{CONTROL_INTERFACE}}', '{{CONTROL_IPAD}}',
+            '{{CONTROL_NOTE}}', '{{NETWORK_INTERFACE}}', '{{NETWORK_IP}}',
+            '{{NETWORK_RESP}}', '{{NETWORK_NOTE}}'
+          ];
+
+          const replacePlaceholdersInSheet = (clonedSheet, room) => {
+            clonedSheet.createTextFinder('{{ROOM_NAME}}').replaceAllWith(room.name || '');
+            clonedSheet.createTextFinder('{{ROOM_FLOOR}}').replaceAllWith(room.floor || '');
+            clonedSheet.createTextFinder('{{ROOM_WIDTH}}').replaceAllWith(room.roomWidth ? String(room.roomWidth) : '-');
+            clonedSheet.createTextFinder('{{ROOM_LENGTH}}').replaceAllWith(room.roomLength ? String(room.roomLength) : '-');
+            clonedSheet.createTextFinder('{{ROOM_HEIGHT}}').replaceAllWith(room.roomHeight ? String(room.roomHeight) : '-');
+            clonedSheet.createTextFinder('{{INSTALLATION_TYPE}}').replaceAllWith(room.installationType || '-');
+            clonedSheet.createTextFinder('{{SURFACE_TYPE}}').replaceAllWith(room.surfaceType || '-');
+            clonedSheet.createTextFinder('{{STRUCTURE_RESP}}').replaceAllWith(room.structureResponsibility || '-');
+            clonedSheet.createTextFinder('{{CABLING_RESP}}').replaceAllWith(room.cablingResponsibility || '-');
+            clonedSheet.createTextFinder('{{POWER_RESP}}').replaceAllWith(room.mainPowerResponsibility || '-');
+            clonedSheet.createTextFinder('{{DISTANCE_CONTROL}}').replaceAllWith(room.distanceToControlRoom ? String(room.distanceToControlRoom) : '-');
+            clonedSheet.createTextFinder('{{RACK_LOCATION}}').replaceAllWith(room.rackLocation || '-');
+            clonedSheet.createTextFinder('{{RACK_RESP}}').replaceAllWith(room.rackResponsibility || '-');
+            clonedSheet.createTextFinder('{{RACK_POWER_RESP}}').replaceAllWith(room.rackPowerSource || '-');
+            clonedSheet.createTextFinder('{{WALL_PLATE_WIRING}}').replaceAllWith(room.wallPlateWiring || '-');
+            clonedSheet.createTextFinder('{{WALL_PLATE_TYPE}}').replaceAllWith(room.wallPlateType || '-');
+            clonedSheet.createTextFinder('{{WALL_PLATE_LOC}}').replaceAllWith(room.wallPlateLocation || '-');
+            
+            clonedSheet.createTextFinder('{{LED_WIDTH}}').replaceAllWith(room.ledWidth ? String(room.ledWidth) : '-');
+            clonedSheet.createTextFinder('{{LED_HEIGHT}}').replaceAllWith(room.ledHeight ? String(room.ledHeight) : '-');
+            clonedSheet.createTextFinder('{{LED_PITCH}}').replaceAllWith(room.ledPixelPitch || '-');
+            clonedSheet.createTextFinder('{{LED_TYPE}}').replaceAllWith(room.ledType || '-');
+            clonedSheet.createTextFinder('{{LED_SUBSTRATE}}').replaceAllWith(room.ledSubstrate || '-');
+            clonedSheet.createTextFinder('{{LED_APPLICATION}}').replaceAllWith(room.ledApplication || '-');
+            clonedSheet.createTextFinder('{{INTERACTIVE_QTY}}').replaceAllWith(room.interactiveQty ? String(room.interactiveQty) : '-');
+            clonedSheet.createTextFinder('{{INTERACTIVE_SIZE}}').replaceAllWith(room.interactiveSize ? String(room.interactiveSize) : '-');
+            clonedSheet.createTextFinder('{{INTERACTIVE_BRAND}}').replaceAllWith(room.interactiveBrand || '-');
+            clonedSheet.createTextFinder('{{PROJECTOR_QTY}}').replaceAllWith(room.projectorQty ? String(room.projectorQty) : '-');
+            clonedSheet.createTextFinder('{{PROJECTOR_LUMEN}}').replaceAllWith(room.projectorLumen ? String(room.projectorLumen) : '-');
+            clonedSheet.createTextFinder('{{PROJECTOR_BRAND}}').replaceAllWith(room.projectorBrand || '-');
+            clonedSheet.createTextFinder('{{SIDE_DISPLAY_TYPE}}').replaceAllWith(room.sideDisplayType || '-');
+            clonedSheet.createTextFinder('{{SIDE_DISPLAY_QTY}}').replaceAllWith(room.sideDisplayQty ? String(room.sideDisplayQty) : '-');
+            clonedSheet.createTextFinder('{{SIDE_DISPLAY_IMAGE}}').replaceAllWith(room.sideDisplayDiffImage || '-');
+            clonedSheet.createTextFinder('{{PTZ_QTY}}').replaceAllWith(room.ptzQty ? String(room.ptzQty) : '-');
+            clonedSheet.createTextFinder('{{PTZ_TRACKING}}').replaceAllWith(room.ptzTracking || '-');
+            clonedSheet.createTextFinder('{{PTZ_BRAND}}').replaceAllWith(room.ptzBrand || '-');
+            clonedSheet.createTextFinder('{{SIGNAGE_QTY}}').replaceAllWith(room.signageQty ? String(room.signageQty) : '-');
+            clonedSheet.createTextFinder('{{SIGNAGE_SIZE}}').replaceAllWith(room.signageSize ? String(room.signageSize) : '-');
+            clonedSheet.createTextFinder('{{SIGNAGE_BRAND}}').replaceAllWith(room.signageBrand || '-');
+            clonedSheet.createTextFinder('{{VISUAL_NOTE}}').replaceAllWith(room.visualNote || '-');
+            
+            clonedSheet.createTextFinder('{{MIC_WIRED_QTY}}').replaceAllWith(room.micWiredQty ? String(room.micWiredQty) : '-');
+            clonedSheet.createTextFinder('{{MIC_WIRED_BRAND}}').replaceAllWith(room.micWiredBrand || '-');
+            clonedSheet.createTextFinder('{{MIC_HAND_QTY}}').replaceAllWith(room.micWirelessHandQty ? String(room.micWirelessHandQty) : '-');
+            clonedSheet.createTextFinder('{{MIC_HAND_BRAND}}').replaceAllWith(room.micWirelessHandBrand || '-');
+            clonedSheet.createTextFinder('{{MIC_LAPEL_QTY}}').replaceAllWith(room.micWirelessLapelQty ? String(room.micWirelessLapelQty) : '-');
+            clonedSheet.createTextFinder('{{MIC_LAPEL_BRAND}}').replaceAllWith(room.micWirelessLapelBrand || '-');
+            clonedSheet.createTextFinder('{{SPEAKER_TYPE}}').replaceAllWith(room.speakerType || '-');
+            clonedSheet.createTextFinder('{{SPEAKER_BRAND}}').replaceAllWith(room.speakerBrand || '-');
+            clonedSheet.createTextFinder('{{AIO_QTY}}').replaceAllWith(room.allInOneQty ? String(room.allInOneQty) : '-');
+            clonedSheet.createTextFinder('{{AIO_WIRELESS_TYPE}}').replaceAllWith(room.allInOneWirelessType || '-');
+            clonedSheet.createTextFinder('{{AIO_BRAND}}').replaceAllWith(room.allInOneBrand || '-');
+            clonedSheet.createTextFinder('{{VDO_PLATFORM}}').replaceAllWith(room.vdoConferencePlatform || '-');
+            clonedSheet.createTextFinder('{{TABLETOP_CHAIRMAN}}').replaceAllWith(room.tabletopChairmanQty ? String(room.tabletopChairmanQty) : '-');
+            clonedSheet.createTextFinder('{{TABLETOP_DELEGATE}}').replaceAllWith(room.tabletopDelegateQty ? String(room.tabletopDelegateQty) : '-');
+            clonedSheet.createTextFinder('{{TABLETOP_TYPE}}').replaceAllWith(room.tabletopType || '-');
+            clonedSheet.createTextFinder('{{TABLETOP_BRAND}}').replaceAllWith(room.tabletopBrand || '-');
+            clonedSheet.createTextFinder('{{TABLETOP_SPECIAL}}').replaceAllWith(room.tabletopSpecialFeatures || '-');
+            clonedSheet.createTextFinder('{{AUDIO_NOTE}}').replaceAllWith(room.audioNote || '-');
+            
+            clonedSheet.createTextFinder('{{CONTROL_TYPE}}').replaceAllWith(room.controlType || '-');
+            clonedSheet.createTextFinder('{{CONTROL_INTERFACE}}').replaceAllWith(room.controlInterface || '-');
+            clonedSheet.createTextFinder('{{CONTROL_IPAD}}').replaceAllWith(room.controlIpadStatus || '-');
+            clonedSheet.createTextFinder('{{CONTROL_NOTE}}').replaceAllWith(room.controlNote || '-');
+            clonedSheet.createTextFinder('{{NETWORK_INTERFACE}}').replaceAllWith(room.networkInterface || '-');
+            clonedSheet.createTextFinder('{{NETWORK_IP}}').replaceAllWith(room.networkIPRequirement || '-');
+            clonedSheet.createTextFinder('{{NETWORK_RESP}}').replaceAllWith(room.networkResponsibility || '-');
+            clonedSheet.createTextFinder('{{NETWORK_NOTE}}').replaceAllWith(room.networkNote || '-');
+          };
+
+          const sheetsToDelete = [];
+
           for (const sheet of sheets) {
+            const sheetName = sheet.getName();
             const lastRow = sheet.getLastRow();
             const lastCol = sheet.getLastColumn();
             if (lastRow === 0 || lastCol === 0) continue;
             
-            const values = sheet.getRange(1, 1, lastRow, lastCol).getValues();
-            let templateRowIdx = -1;
-            for (let r = 0; r < lastRow; r++) {
-              for (let c = 0; c < lastCol; c++) {
-                if (String(values[r][c]).includes('{{ROOM_NAME}}')) {
-                  templateRowIdx = r + 1; // 1-indexed
-                  break;
-                }
+            const hasRoomName = sheet.createTextFinder('{{ROOM_NAME}}').findNext() !== null;
+            if (!hasRoomName) continue;
+
+            // Check if vertical layout (contains other room placeholders in the sheet)
+            let isVertical = false;
+            for (const placeholder of ROOM_PLACEHOLDERS) {
+              if (sheet.createTextFinder(placeholder).findNext() !== null) {
+                isVertical = true;
+                break;
               }
-              if (templateRowIdx !== -1) break;
             }
-            
-            if (templateRowIdx === -1) continue; // No template row in this sheet
-            
-            // Copy template row formulas/values
-            const templateRange = sheet.getRange(templateRowIdx, 1, 1, lastCol);
-            const templateFormulas = templateRange.getFormulas()[0];
-            const templateValues = templateRange.getValues()[0];
-            
-            // We write the rooms data below the template row
-            for (let i = 0; i < rooms.length; i++) {
-              const targetRowIdx = templateRowIdx + i + 1;
-              sheet.insertRowAfter(targetRowIdx - 1);
-              
-              // Copy formats from template row
-              templateRange.copyTo(sheet.getRange(targetRowIdx, 1, 1, lastCol), SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
-              
-              // Build values for target row
-              const rowValues = [];
-              for (let c = 0; c < lastCol; c++) {
-                let cellText = templateFormulas[c] || templateValues[c];
-                if (typeof cellText === 'string') {
-                  cellText = replaceRoomPlaceholders(cellText, rooms[i]);
+
+            if (isVertical && rooms.length > 0) {
+              console.log('Vertical Sheet Tab layout detected for: "' + sheetName + '". Duplicating tab for each room...');
+              for (let i = 0; i < rooms.length; i++) {
+                const room = rooms[i];
+                const roomNameStr = room.name || ('ห้องที่ ' + (i + 1));
+                const newSheetName = sheetName + ' - ' + roomNameStr.substring(0, 20); // Keep tab name short
+                
+                const clonedSheet = sheet.copyTo(ss);
+                clonedSheet.setName(newSheetName);
+                
+                // Fast TextFinder replacements in place
+                replacePlaceholdersInSheet(clonedSheet, room);
+              }
+              sheetsToDelete.push(sheet);
+            } else {
+              // Horizontal row replication logic
+              console.log('Horizontal Table Row layout detected for: "' + sheetName + '". Replicating rows...');
+              let templateRowIdx = -1;
+              const values = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+              for (let r = 0; r < lastRow; r++) {
+                for (let c = 0; c < lastCol; c++) {
+                  if (String(values[r][c]).includes('{{ROOM_NAME}}')) {
+                    templateRowIdx = r + 1; // 1-indexed
+                    break;
+                  }
                 }
-                rowValues.push(cellText);
+                if (templateRowIdx !== -1) break;
               }
               
-              sheet.getRange(targetRowIdx, 1, 1, lastCol).setValues([rowValues]);
+              if (templateRowIdx !== -1) {
+                const templateRange = sheet.getRange(templateRowIdx, 1, 1, lastCol);
+                const templateFormulas = templateRange.getFormulas()[0];
+                const templateValues = templateRange.getValues()[0];
+                
+                for (let i = 0; i < rooms.length; i++) {
+                  const targetRowIdx = templateRowIdx + i + 1;
+                  sheet.insertRowAfter(targetRowIdx - 1);
+                  
+                  // Copy formats
+                  templateRange.copyTo(sheet.getRange(targetRowIdx, 1, 1, lastCol), SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
+                  
+                  // Build values
+                  const rowValues = [];
+                  for (let c = 0; c < lastCol; c++) {
+                    let cellText = templateFormulas[c] || templateValues[c];
+                    if (typeof cellText === 'string') {
+                      cellText = replaceRoomPlaceholders(cellText, rooms[i]);
+                    }
+                    rowValues.push(cellText);
+                  }
+                  sheet.getRange(targetRowIdx, 1, 1, lastCol).setValues([rowValues]);
+                }
+                // Delete template row
+                sheet.deleteRow(templateRowIdx);
+              }
             }
-            
-            // Delete the template row
-            sheet.deleteRow(templateRowIdx);
+          }
+
+          // Delete the original template sheets that were duplicated
+          for (const s of sheetsToDelete) {
+            ss.deleteSheet(s);
           }
           
           SpreadsheetApp.flush();

@@ -11,7 +11,8 @@ import ImageAnnotation from '@/components/ImageAnnotation';
 import { 
   ArrowLeft, ArrowRight, Save, Image as ImageIcon, Sparkles, Check, 
   Wifi, WifiOff, AlertTriangle, Trash2, Edit3, Loader2, CheckCircle, X,
-  Layers, Volume2, Monitor, Settings, Info, MapPin, Eye, Plus, Copy, Camera, Network, Download
+  Layers, Volume2, Monitor, Settings, Info, MapPin, Eye, Plus, Copy, Camera, Network, Download,
+  HelpCircle, CheckCircle2, XCircle
 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -91,6 +92,26 @@ function SurveyWizardForm() {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // Custom beautiful popup modal state
+  const [modalConfig, setModalConfig] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'confirm' | 'warning' | 'error' | 'info';
+    onConfirm?: () => void;
+    onCancel?: () => void;
+  } | null>(null);
+
+  const showPopup = (
+    type: 'success' | 'confirm' | 'warning' | 'error' | 'info',
+    title: string,
+    message: string,
+    onConfirm?: () => void,
+    onCancel?: () => void
+  ) => {
+    setModalConfig({ show: true, type, title, message, onConfirm, onCancel });
+  };
 
   // Master Data & DB Cache options
   const [salesPersons, setSalesPersons] = useState<SalesPersonOpt[]>([]);
@@ -324,8 +345,9 @@ function SurveyWizardForm() {
           setRooms(data.roomsData);
         }
       } else {
-        alert('ไม่พบข้อมูลแบบสำรวจที่ต้องการแก้ไข');
-        router.push('/');
+        showPopup('error', 'ไม่พบข้อมูล', 'ไม่พบข้อมูลแบบสำรวจที่ต้องการแก้ไข', () => {
+          router.push('/');
+        });
       }
     } catch (error) {
       console.error('Error loading existing survey:', error);
@@ -336,7 +358,7 @@ function SurveyWizardForm() {
 
   const getCurrentGPSLocation = () => {
     if (!navigator.geolocation) {
-      alert('เบราว์เซอร์นี้ไม่รองรับการดึงตำแหน่ง Geolocation');
+      showPopup('warning', 'ไม่รองรับ GPS', 'เบราว์เซอร์นี้ไม่รองรับการดึงตำแหน่ง Geolocation');
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -352,7 +374,7 @@ function SurveyWizardForm() {
         }
       },
       (err) => {
-        alert('ไม่สามารถดึงตำแหน่ง GPS ได้: ' + err.message);
+        showPopup('error', 'ดึง GPS ล้มเหลว', 'ไม่สามารถดึงตำแหน่ง GPS ได้: ' + err.message);
       }
     );
   };
@@ -381,14 +403,19 @@ function SurveyWizardForm() {
 
   const deleteRoomTab = (indexToDelete: number) => {
     if (rooms.length <= 1) {
-      alert('ต้องมีห้อง/จุดติดตั้งอย่างน้อย 1 จุด');
+      showPopup('warning', 'ไม่สามารถลบได้', 'ต้องมีห้อง/จุดติดตั้งอย่างน้อย 1 จุด');
       return;
     }
-    if (!confirm(`ยืนยันที่จะลบข้อมูล "${rooms[indexToDelete].name}" ทั้งหมดใช่หรือไม่?`)) return;
-
-    const updated = rooms.filter((_, i) => i !== indexToDelete);
-    setRooms(updated);
-    setActiveRoomIndex(0);
+    showPopup(
+      'confirm',
+      'ยืนยันการลบ',
+      `ยืนยันที่จะลบข้อมูล "${rooms[indexToDelete].name}" ทั้งหมดใช่หรือไม่?`,
+      () => {
+        const updated = rooms.filter((_, i) => i !== indexToDelete);
+        setRooms(updated);
+        setActiveRoomIndex(0);
+      }
+    );
   };
 
   const updateRoomField = (roomIndex: number, field: keyof RoomData, value: any) => {
@@ -495,21 +522,26 @@ function SurveyWizardForm() {
   };
 
   const deleteRoomImage = (roomIndex: number, imageId: string) => {
-    if (!confirm('ต้องการลบรูปภาพนี้ใช่หรือไม่?')) return;
-    
-    if (roomIndex === -1) {
-      setExistingImages(prev => prev.filter(img => img.id !== imageId));
-    } else {
-      setRooms(prev => {
-        const copy = [...prev];
-        const images = copy[roomIndex].images || [];
-        copy[roomIndex] = {
-          ...copy[roomIndex],
-          images: images.filter(img => img.id !== imageId)
-        };
-        return copy;
-      });
-    }
+    showPopup(
+      'confirm',
+      'ยืนยันการลบรูปภาพ',
+      'ต้องการลบรูปภาพนี้ใช่หรือไม่?',
+      () => {
+        if (roomIndex === -1) {
+          setExistingImages(prev => prev.filter(img => img.id !== imageId));
+        } else {
+          setRooms(prev => {
+            const copy = [...prev];
+            const images = copy[roomIndex].images || [];
+            copy[roomIndex] = {
+              ...copy[roomIndex],
+              images: images.filter(img => img.id !== imageId)
+            };
+            return copy;
+          });
+        }
+      }
+    );
   };
 
   const handleImageDescChange = (roomIndex: number, imageId: string, desc: string) => {
@@ -619,7 +651,7 @@ function SurveyWizardForm() {
   const nextStep = () => {
     if (currentStep === 1) {
       if (!projectName.trim() || !customerName.trim()) {
-        alert('กรุณากรอกชื่อโปรเจกต์และชื่อลูกค้า');
+        showPopup('warning', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกชื่อโปรเจกต์และชื่อลูกค้าก่อนไปขั้นตอนถัดไป');
         return;
       }
     }
@@ -2300,6 +2332,75 @@ function SurveyWizardForm() {
                 onSave={saveAnnotationResult}
                 onCancel={() => { setAnnotatingRoomIndex(null); setAnnotatingImageId(null); setAnnotatingImageSrc(null); }}
               />
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Custom beautiful popup modal overlay */}
+      {modalConfig && modalConfig.show && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl border border-slate-100 flex flex-col items-center text-center space-y-4 animate-scaleUp">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+              modalConfig.type === 'success' ? 'bg-emerald-50 text-emerald-600' :
+              modalConfig.type === 'confirm' ? 'bg-indigo-50 text-indigo-600' :
+              modalConfig.type === 'warning' ? 'bg-amber-50 text-amber-600' :
+              modalConfig.type === 'error' ? 'bg-rose-50 text-rose-600' :
+              'bg-blue-50 text-blue-600'
+            }`}>
+              {modalConfig.type === 'success' && <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />}
+              {modalConfig.type === 'confirm' && <HelpCircle className="w-6 h-6 stroke-[2.5]" />}
+              {modalConfig.type === 'warning' && <AlertTriangle className="w-6 h-6 stroke-[2.5]" />}
+              {modalConfig.type === 'error' && <XCircle className="w-6 h-6 stroke-[2.5]" />}
+              {modalConfig.type === 'info' && <Info className="w-6 h-6 stroke-[2.5]" />}
+            </div>
+            
+            <div className="space-y-1">
+              <h3 className="font-bold text-slate-800 text-base">{modalConfig.title}</h3>
+              <p className="text-slate-500 text-xs md:text-sm leading-relaxed">{modalConfig.message}</p>
+            </div>
+
+            <div className="flex gap-2 w-full pt-2">
+              {modalConfig.type === 'confirm' ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModalConfig(null);
+                      if (modalConfig.onCancel) modalConfig.onCancel();
+                    }}
+                    className="flex-1 py-2 px-3 border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-650 text-xs font-semibold transition"
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModalConfig(null);
+                      if (modalConfig.onConfirm) modalConfig.onConfirm();
+                    }}
+                    className="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition shadow-sm"
+                  >
+                    ตกลง
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalConfig(null);
+                    if (modalConfig.onConfirm) modalConfig.onConfirm();
+                  }}
+                  className={`w-full py-2 px-4 text-white rounded-xl text-xs font-bold transition shadow-sm ${
+                    modalConfig.type === 'success' ? 'bg-emerald-600 hover:bg-emerald-700' :
+                    modalConfig.type === 'error' ? 'bg-rose-600 hover:bg-rose-700' :
+                    modalConfig.type === 'warning' ? 'bg-amber-500 hover:bg-amber-600' :
+                    'bg-indigo-600 hover:bg-indigo-700'
+                  }`}
+                >
+                  ตกลง
+                </button>
+              )}
             </div>
           </div>
         </div>

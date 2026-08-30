@@ -29,6 +29,11 @@ export function useOfflineSync() {
 
     updatePendingCount();
 
+    // Auto-sync on mount if online
+    if (navigator.onLine) {
+      syncPendingSurveys();
+    }
+
     const interval = setInterval(updatePendingCount, 3000);
 
     return () => {
@@ -38,7 +43,7 @@ export function useOfflineSync() {
     };
   }, []);
 
-  const updatePendingCount = async () => {
+  async function updatePendingCount() {
     try {
       const count = await offlineDb.draftSurveys
         .where('status')
@@ -48,9 +53,9 @@ export function useOfflineSync() {
     } catch (e) {
       console.error('Error counting pending surveys:', e);
     }
-  };
+  }
 
-  const syncPendingSurveys = async () => {
+  async function syncPendingSurveys() {
     if (!navigator.onLine || syncing) return;
 
     try {
@@ -99,7 +104,7 @@ export function useOfflineSync() {
     } finally {
       setSyncing(false);
     }
-  };
+  }
 
   return {
     isOnline,
