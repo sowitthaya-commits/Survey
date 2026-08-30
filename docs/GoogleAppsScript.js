@@ -64,88 +64,37 @@ function doPost(e) {
         
         if (mimeType.indexOf('spreadsheet') !== -1) {
           const ss = SpreadsheetApp.openById(newDocFile.getId());
+          const sheets = ss.getSheets();
           
-          // --- TAB 1: Project Info ---
-          const sheet1 = ss.getSheetByName("1");
-          if (sheet1) {
-            const budgetVal = postData.budget || '';
-            const cleanBudget = String(budgetVal).replace(/[^0-9.]/g, '');
-            const parsedBudget = cleanBudget ? Number(cleanBudget) : NaN;
-            const budgetText = !isNaN(parsedBudget) ? parsedBudget.toLocaleString() + ' บาท' : (budgetVal || '-');
+          // --- 1. Replace Project Info on ALL Sheets ---
+          const budgetVal = postData.budget || '';
+          const cleanBudget = String(budgetVal).replace(/[^0-9.]/g, '');
+          const parsedBudget = cleanBudget ? Number(cleanBudget) : NaN;
+          const budgetText = !isNaN(parsedBudget) ? parsedBudget.toLocaleString() + ' บาท' : (budgetVal || '-');
 
-            sheet1.createTextFinder('{{PROJECT_NAME}}').replaceAllWith(projectName);
-            sheet1.createTextFinder('{{CUSTOMER_NAME}}').replaceAllWith(customerName);
-            sheet1.createTextFinder('{{BUDGET}}').replaceAllWith(budgetText);
-            sheet1.createTextFinder('{{SALES_PERSON}}').replaceAllWith(postData.salesPersonName || '-');
-            sheet1.createTextFinder('{{SURVEY_DATE}}').replaceAllWith(postData.surveyDate || '-');
-            sheet1.createTextFinder('{{REQUEST_DATE}}').replaceAllWith(postData.requestDate || '-');
-            sheet1.createTextFinder('{{QUOTATION_DEADLINE}}').replaceAllWith(postData.quotationDeadline || '-');
-            sheet1.createTextFinder('{{CONTACT_NAME}}').replaceAllWith(postData.contactName || '-');
-            sheet1.createTextFinder('{{CONTACT_PHONE}}').replaceAllWith(postData.contactPhone || '-');
-            sheet1.createTextFinder('{{LOCATION_ADDRESS}}').replaceAllWith(postData.locationAddress || '-');
-            sheet1.createTextFinder('{{LOCATION_LAT}}').replaceAllWith(postData.locationLat ? String(postData.locationLat) : '-');
-            sheet1.createTextFinder('{{LOCATION_LNG}}').replaceAllWith(postData.locationLng ? String(postData.locationLng) : '-');
+          for (const sheet of sheets) {
+            sheet.createTextFinder('{{PROJECT_NAME}}').replaceAllWith(projectName);
+            sheet.createTextFinder('{{CUSTOMER_NAME}}').replaceAllWith(customerName);
+            sheet.createTextFinder('{{BUDGET}}').replaceAllWith(budgetText);
+            sheet.createTextFinder('{{SALES_PERSON}}').replaceAllWith(postData.salesPersonName || '-');
+            sheet.createTextFinder('{{SURVEY_DATE}}').replaceAllWith(postData.surveyDate || '-');
+            sheet.createTextFinder('{{REQUEST_DATE}}').replaceAllWith(postData.requestDate || '-');
+            sheet.createTextFinder('{{QUOTATION_DEADLINE}}').replaceAllWith(postData.quotationDeadline || '-');
+            sheet.createTextFinder('{{CONTACT_NAME}}').replaceAllWith(postData.contactName || '-');
+            sheet.createTextFinder('{{CONTACT_PHONE}}').replaceAllWith(postData.contactPhone || '-');
+            sheet.createTextFinder('{{LOCATION_ADDRESS}}').replaceAllWith(postData.locationAddress || '-');
+            sheet.createTextFinder('{{LOCATION_LAT}}').replaceAllWith(postData.locationLat ? String(postData.locationLat) : '-');
+            sheet.createTextFinder('{{LOCATION_LNG}}').replaceAllWith(postData.locationLng ? String(postData.locationLng) : '-');
           }
           
           const rooms = postData.roomsData || [];
           
-          // Helper to process a sheet tab with room rows
-          const processRoomSheet = (sheetName, replaceFn) => {
-            const sheet = ss.getSheetByName(sheetName);
-            if (!sheet) return;
+          // --- 2. Unified Room Placeholders Replacer ---
+          const replaceRoomPlaceholders = (text, room) => {
+            if (typeof text !== 'string') return text;
             
-            // Find the template row containing {{ROOM_NAME}}
-            const lastRow = sheet.getLastRow();
-            const lastCol = sheet.getLastColumn();
-            if (lastRow === 0 || lastCol === 0) return;
-            
-            const values = sheet.getRange(1, 1, lastRow, lastCol).getValues();
-            let templateRowIdx = -1;
-            for (let r = 0; r < lastRow; r++) {
-              for (let c = 0; c < lastCol; c++) {
-                if (String(values[r][c]).includes('{{ROOM_NAME}}')) {
-                  templateRowIdx = r + 1; // 1-indexed
-                  break;
-                }
-              }
-              if (templateRowIdx !== -1) break;
-            }
-            
-            if (templateRowIdx === -1) return; // No template row found
-            
-            // Copy template row formulas/values
-            const templateRange = sheet.getRange(templateRowIdx, 1, 1, lastCol);
-            const templateFormulas = templateRange.getFormulas()[0];
-            const templateValues = templateRange.getValues()[0];
-            
-            // We write the rooms data below the template row
-            for (let i = 0; i < rooms.length; i++) {
-              const targetRowIdx = templateRowIdx + i + 1;
-              sheet.insertRowAfter(targetRowIdx - 1);
-              
-              // Copy formats from template row
-              templateRange.copyTo(sheet.getRange(targetRowIdx, 1, 1, lastCol), SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
-              
-              // Build values for target row
-              const rowValues = [];
-              for (let c = 0; c < lastCol; c++) {
-                let cellText = templateFormulas[c] || templateValues[c];
-                if (typeof cellText === 'string') {
-                  cellText = replaceFn(cellText, rooms[i]);
-                }
-                rowValues.push(cellText);
-              }
-              
-              sheet.getRange(targetRowIdx, 1, 1, lastCol).setValues([rowValues]);
-            }
-            
-            // Delete the template row
-            sheet.deleteRow(templateRowIdx);
-          };
-          
-          // --- TAB 2: Room structure specs ---
-          processRoomSheet("2", (text, room) => {
             return text
+              // Step 2: Room structure
               .replace(/\{\{ROOM_NAME\}\}/g, room.name || '')
               .replace(/\{\{ROOM_FLOOR\}\}/g, room.floor || '')
               .replace(/\{\{ROOM_WIDTH\}\}/g, room.roomWidth ? String(room.roomWidth) : '-')
@@ -162,13 +111,8 @@ function doPost(e) {
               .replace(/\{\{RACK_POWER_RESP\}\}/g, room.rackPowerSource || '-')
               .replace(/\{\{WALL_PLATE_WIRING\}\}/g, room.wallPlateWiring || '-')
               .replace(/\{\{WALL_PLATE_TYPE\}\}/g, room.wallPlateType || '-')
-              .replace(/\{\{WALL_PLATE_LOC\}\}/g, room.wallPlateLocation || '-');
-          });
-          
-          // --- TAB 3: Display specs ---
-          processRoomSheet("3", (text, room) => {
-            return text
-              .replace(/\{\{ROOM_NAME\}\}/g, room.name || '')
+              .replace(/\{\{WALL_PLATE_LOC\}\}/g, room.wallPlateLocation || '-')
+              // Step 3: Visual / Display
               .replace(/\{\{LED_WIDTH\}\}/g, room.ledWidth ? String(room.ledWidth) : '-')
               .replace(/\{\{LED_HEIGHT\}\}/g, room.ledHeight ? String(room.ledHeight) : '-')
               .replace(/\{\{LED_PITCH\}\}/g, room.ledPixelPitch || '-')
@@ -190,13 +134,8 @@ function doPost(e) {
               .replace(/\{\{SIGNAGE_QTY\}\}/g, room.signageQty ? String(room.signageQty) : '-')
               .replace(/\{\{SIGNAGE_SIZE\}\}/g, room.signageSize ? String(room.signageSize) : '-')
               .replace(/\{\{SIGNAGE_BRAND\}\}/g, room.signageBrand || '-')
-              .replace(/\{\{VISUAL_NOTE\}\}/g, room.visualNote || '-');
-          });
-          
-          // --- TAB 4: Audio specs ---
-          processRoomSheet("4", (text, room) => {
-            return text
-              .replace(/\{\{ROOM_NAME\}\}/g, room.name || '')
+              .replace(/\{\{VISUAL_NOTE\}\}/g, room.visualNote || '-')
+              // Step 4: Audio
               .replace(/\{\{MIC_WIRED_QTY\}\}/g, room.micWiredQty ? String(room.micWiredQty) : '-')
               .replace(/\{\{MIC_WIRED_BRAND\}\}/g, room.micWiredBrand || '-')
               .replace(/\{\{MIC_HAND_QTY\}\}/g, room.micWirelessHandQty ? String(room.micWirelessHandQty) : '-')
@@ -214,13 +153,8 @@ function doPost(e) {
               .replace(/\{\{TABLETOP_TYPE\}\}/g, room.tabletopType || '-')
               .replace(/\{\{TABLETOP_BRAND\}\}/g, room.tabletopBrand || '-')
               .replace(/\{\{TABLETOP_SPECIAL\}\}/g, room.tabletopSpecialFeatures || '-')
-              .replace(/\{\{AUDIO_NOTE\}\}/g, room.audioNote || '-');
-          });
-          
-          // --- TAB 5: Control & Network specs ---
-          processRoomSheet("5", (text, room) => {
-            return text
-              .replace(/\{\{ROOM_NAME\}\}/g, room.name || '')
+              .replace(/\{\{AUDIO_NOTE\}\}/g, room.audioNote || '-')
+              // Step 5: Control & Network
               .replace(/\{\{CONTROL_TYPE\}\}/g, room.controlType || '-')
               .replace(/\{\{CONTROL_INTERFACE\}\}/g, room.controlInterface || '-')
               .replace(/\{\{CONTROL_IPAD\}\}/g, room.controlIpadStatus || '-')
@@ -229,7 +163,57 @@ function doPost(e) {
               .replace(/\{\{NETWORK_IP\}\}/g, room.networkIPRequirement || '-')
               .replace(/\{\{NETWORK_RESP\}\}/g, room.networkResponsibility || '-')
               .replace(/\{\{NETWORK_NOTE\}\}/g, room.networkNote || '-');
-          });
+          };
+          
+          // --- 3. Process Dynamic Room Rows in ALL Sheets containing {{ROOM_NAME}} ---
+          for (const sheet of sheets) {
+            const lastRow = sheet.getLastRow();
+            const lastCol = sheet.getLastColumn();
+            if (lastRow === 0 || lastCol === 0) continue;
+            
+            const values = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+            let templateRowIdx = -1;
+            for (let r = 0; r < lastRow; r++) {
+              for (let c = 0; c < lastCol; c++) {
+                if (String(values[r][c]).includes('{{ROOM_NAME}}')) {
+                  templateRowIdx = r + 1; // 1-indexed
+                  break;
+                }
+              }
+              if (templateRowIdx !== -1) break;
+            }
+            
+            if (templateRowIdx === -1) continue; // No template row in this sheet
+            
+            // Copy template row formulas/values
+            const templateRange = sheet.getRange(templateRowIdx, 1, 1, lastCol);
+            const templateFormulas = templateRange.getFormulas()[0];
+            const templateValues = templateRange.getValues()[0];
+            
+            // We write the rooms data below the template row
+            for (let i = 0; i < rooms.length; i++) {
+              const targetRowIdx = templateRowIdx + i + 1;
+              sheet.insertRowAfter(targetRowIdx - 1);
+              
+              // Copy formats from template row
+              templateRange.copyTo(sheet.getRange(targetRowIdx, 1, 1, lastCol), SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
+              
+              // Build values for target row
+              const rowValues = [];
+              for (let c = 0; c < lastCol; c++) {
+                let cellText = templateFormulas[c] || templateValues[c];
+                if (typeof cellText === 'string') {
+                  cellText = replaceRoomPlaceholders(cellText, rooms[i]);
+                }
+                rowValues.push(cellText);
+              }
+              
+              sheet.getRange(targetRowIdx, 1, 1, lastCol).setValues([rowValues]);
+            }
+            
+            // Delete the template row
+            sheet.deleteRow(templateRowIdx);
+          }
           
           SpreadsheetApp.flush();
         } else {
