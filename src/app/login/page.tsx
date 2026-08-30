@@ -66,7 +66,7 @@ export default function LoginPage() {
             SWS Survey System
           </h2>
           <p className="text-slate-500 text-xs md:text-sm">
-            ระบบจัดเก็บแบบสำรวจความต้องการอุปกรณ์ภาพและเสียงหน้างาน
+            ระบบจัดเก็บแบบสำรวจความต้องการอุปกรณ์ภาพและเสียง
           </p>
         </div>
 
