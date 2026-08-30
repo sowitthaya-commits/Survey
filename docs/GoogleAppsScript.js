@@ -61,30 +61,35 @@ function doPost(e) {
         const templateFile = DriveApp.getFileById(TEMPLATE_DOC_ID);
         const mimeType = templateFile.getMimeType();
         const newDocFile = templateFile.makeCopy('รายงานการสำรวจ - ' + projectName + ' (' + customerName + ')', targetFolder);
+        console.log('Successfully copied template file. New file ID: ' + newDocFile.getId() + ', MIME Type: ' + mimeType);
         
         if (mimeType.indexOf('spreadsheet') !== -1) {
           const ss = SpreadsheetApp.openById(newDocFile.getId());
           const sheets = ss.getSheets();
+          console.log('Successfully opened spreadsheet. Total sheet tabs: ' + sheets.length);
           
           // --- 1. Replace Project Info on ALL Sheets ---
           const budgetVal = postData.budget || '';
           const cleanBudget = String(budgetVal).replace(/[^0-9.]/g, '');
           const parsedBudget = cleanBudget ? Number(cleanBudget) : NaN;
           const budgetText = !isNaN(parsedBudget) ? parsedBudget.toLocaleString() + ' บาท' : (budgetVal || '-');
+          console.log('Project Info to replace: ' + JSON.stringify({ projectName, customerName, budgetText }));
 
           for (const sheet of sheets) {
-            sheet.createTextFinder('{{PROJECT_NAME}}').replaceAllWith(projectName);
-            sheet.createTextFinder('{{CUSTOMER_NAME}}').replaceAllWith(customerName);
-            sheet.createTextFinder('{{BUDGET}}').replaceAllWith(budgetText);
-            sheet.createTextFinder('{{SALES_PERSON}}').replaceAllWith(postData.salesPersonName || '-');
-            sheet.createTextFinder('{{SURVEY_DATE}}').replaceAllWith(postData.surveyDate || '-');
-            sheet.createTextFinder('{{REQUEST_DATE}}').replaceAllWith(postData.requestDate || '-');
-            sheet.createTextFinder('{{QUOTATION_DEADLINE}}').replaceAllWith(postData.quotationDeadline || '-');
-            sheet.createTextFinder('{{CONTACT_NAME}}').replaceAllWith(postData.contactName || '-');
-            sheet.createTextFinder('{{CONTACT_PHONE}}').replaceAllWith(postData.contactPhone || '-');
-            sheet.createTextFinder('{{LOCATION_ADDRESS}}').replaceAllWith(postData.locationAddress || '-');
-            sheet.createTextFinder('{{LOCATION_LAT}}').replaceAllWith(postData.locationLat ? String(postData.locationLat) : '-');
-            sheet.createTextFinder('{{LOCATION_LNG}}').replaceAllWith(postData.locationLng ? String(postData.locationLng) : '-');
+            const sheetName = sheet.getName();
+            const r1 = sheet.createTextFinder('{{PROJECT_NAME}}').replaceAllWith(projectName);
+            const r2 = sheet.createTextFinder('{{CUSTOMER_NAME}}').replaceAllWith(customerName);
+            const r3 = sheet.createTextFinder('{{BUDGET}}').replaceAllWith(budgetText);
+            const r4 = sheet.createTextFinder('{{SALES_PERSON}}').replaceAllWith(postData.salesPersonName || '-');
+            const r5 = sheet.createTextFinder('{{SURVEY_DATE}}').replaceAllWith(postData.surveyDate || '-');
+            const r6 = sheet.createTextFinder('{{REQUEST_DATE}}').replaceAllWith(postData.requestDate || '-');
+            const r7 = sheet.createTextFinder('{{QUOTATION_DEADLINE}}').replaceAllWith(postData.quotationDeadline || '-');
+            const r8 = sheet.createTextFinder('{{CONTACT_NAME}}').replaceAllWith(postData.contactName || '-');
+            const r9 = sheet.createTextFinder('{{CONTACT_PHONE}}').replaceAllWith(postData.contactPhone || '-');
+            const r10 = sheet.createTextFinder('{{LOCATION_ADDRESS}}').replaceAllWith(postData.locationAddress || '-');
+            const r11 = sheet.createTextFinder('{{LOCATION_LAT}}').replaceAllWith(postData.locationLat ? String(postData.locationLat) : '-');
+            const r12 = sheet.createTextFinder('{{LOCATION_LNG}}').replaceAllWith(postData.locationLng ? String(postData.locationLng) : '-');
+            console.log('Sheet "' + sheetName + '" replacements count: PROJECT_NAME=' + r1 + ', CUSTOMER_NAME=' + r2 + ', BUDGET=' + r3);
           }
           
           const rooms = postData.roomsData || [];
