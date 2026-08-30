@@ -274,27 +274,15 @@ function doPost(e) {
             const lastCol = sheet.getLastColumn();
             if (lastRow === 0 || lastCol === 0) continue;
             
-            // Check if sheet contains ANY room placeholders (including {{ROOM_NAME}})
-            let hasRoomPlaceholders = sheet.createTextFinder('{{ROOM_NAME}}').findNext() !== null;
-            if (!hasRoomPlaceholders) {
-              for (const placeholder of ROOM_PLACEHOLDERS) {
-                if (sheet.createTextFinder(placeholder).findNext() !== null) {
-                  hasRoomPlaceholders = true;
-                  break;
-                }
-              }
-            }
-            
-            if (!hasRoomPlaceholders) continue; // Skip static sheets
+            const hasRoomName = sheet.createTextFinder('{{ROOM_NAME}}').findNext() !== null;
+            if (!hasRoomName) continue;
 
-            // Check if vertical layout (contains other room placeholders)
+            // Check if vertical layout (contains other room placeholders in the sheet)
             let isVertical = false;
             for (const placeholder of ROOM_PLACEHOLDERS) {
-              if (placeholder !== '{{ROOM_NAME}}') {
-                if (sheet.createTextFinder(placeholder).findNext() !== null) {
-                  isVertical = true;
-                  break;
-                }
+              if (sheet.createTextFinder(placeholder).findNext() !== null) {
+                isVertical = true;
+                break;
               }
             }
 
@@ -308,8 +296,38 @@ function doPost(e) {
                 const clonedSheet = sheet.copyTo(ss);
                 clonedSheet.setName(newSheetName);
                 
+                // Get step number from original sheet name (starts with 2, 3, 4, or 5)
+                let stepNum = 2;
+                if (sheetName.indexOf('3') === 0) stepNum = 3;
+                else if (sheetName.indexOf('4') === 0) stepNum = 4;
+                else if (sheetName.indexOf('5') === 0) stepNum = 5;
+
+                // Filter images for this room and step
+                const stepImages = (room.images || []).filter(function(img) {
+                  return Number(img.step) === stepNum;
+                });
+
+                const url1 = stepImages[0] ? stepImages[0].annotatedImage : '';
+                const url2 = stepImages[1] ? stepImages[1].annotatedImage : '';
+
                 // Fast TextFinder replacements in place
                 replacePlaceholdersInSheet(clonedSheet, room);
+
+                // Replace image placeholders or default to B10/H10
+                const hasImage1Placeholder = clonedSheet.createTextFinder('{{IMAGE_1}}').findNext() !== null;
+                const hasImage2Placeholder = clonedSheet.createTextFinder('{{IMAGE_2}}').findNext() !== null;
+
+                if (hasImage1Placeholder) {
+                  clonedSheet.createTextFinder('{{IMAGE_1}}').replaceAllWith(url1 ? '=IMAGE("' + url1 + '")' : '');
+                } else if (url1) {
+                  clonedSheet.getRange(10, 2).setValue('=IMAGE("' + url1 + '")'); // Col B, Row 10
+                }
+
+                if (hasImage2Placeholder) {
+                  clonedSheet.createTextFinder('{{IMAGE_2}}').replaceAllWith(url2 ? '=IMAGE("' + url2 + '")' : '');
+                } else if (url2) {
+                  clonedSheet.getRange(10, 8).setValue('=IMAGE("' + url2 + '")'); // Col H, Row 10
+                }
               }
               sheetsToDelete.push(sheet);
             } else {
