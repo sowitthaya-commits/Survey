@@ -490,10 +490,47 @@ function SurveyWizardForm() {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
+    const compressLocal = (base64: string): Promise<string> => {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.src = base64;
+        img.onload = () => {
+          let width = img.width;
+          let height = img.height;
+          const maxWidth = 1200;
+          const maxHeight = 900;
+          if (width > height) {
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', 0.7));
+          } else {
+            resolve(base64);
+          }
+        };
+        img.onerror = () => resolve(base64);
+      });
+    };
+
     Array.from(files).forEach(file => {
       const reader = new FileReader();
-      reader.onload = () => {
-        const base64Str = reader.result as string;
+      reader.onload = async () => {
+        const rawBase64 = reader.result as string;
+        const base64Str = await compressLocal(rawBase64);
+
         const newImage: RoomImage = {
           id: uuidv4(),
           step,
