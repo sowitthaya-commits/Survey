@@ -716,58 +716,21 @@ function SurveyWizardForm() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const payload = {
-      id: surveyId,
-      projectName,
-      customerName,
-      salesPersonId,
-      salesPersonName: salesPersonName || currentUser?.name || '',
-      requestDate: requestDate || null,
-      locationLat: locationLat || null,
-      locationLng: locationLng || null,
-      locationAddress: locationAddress || null,
-      quotationDeadline: quotationDeadline || null,
-      budget: budget || null,
-      existingImages,
-      contactName: contactName || null,
-      contactPhone: contactPhone || null,
-      surveyDate: surveyDate || null,
-      roomsData: rooms,
-    };
-
     try {
-      let finalPayload = payload;
-      if (isOnline) {
-        // Upload images one-by-one to avoid 413 Payload Too Large
-        finalPayload = await uploadSurveyBase64Images(payload);
-      }
-
-      if (isOnline) {
-        const res = await fetch('/api/surveys', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(finalPayload),
-        });
-
-        if (res.ok) {
-          await offlineDb.draftSurveys.delete(surveyId);
-          alert('บันทึกข้อมูลแบบสำรวจสำเร็จ! ระบบกำลังดำเนินการสร้างเอกสารรายงานบน Google Drive ในเบื้องหลัง');
+      // Save directly to the local IndexedDB cache as pending_sync
+      await saveToLocalDraft('pending_sync');
+      
+      showPopup(
+        'success',
+        'บันทึกแบบสำรวจสำเร็จ',
+        'บันทึกข้อมูลแบบสำรวจสำเร็จ! ระบบกำลังดำเนินการอัปโหลดรูปภาพและสร้างรายงานบน Google Drive ในเบื้องหลังของหน้าแดชบอร์ดโดยอัตโนมัติ',
+        () => {
           router.push('/');
-        } else {
-          throw new Error('Server error');
         }
-      } else {
-        await saveToLocalDraft('pending_sync');
-        alert('ออฟไลน์: บันทึกความต้องการค้างส่งสำเร็จ ระบบจะอัปโหลดอัตโนมัติเมื่อออนไลน์');
-        router.push('/');
-      }
+      );
     } catch (error) {
       console.error('Error submitting survey:', error);
-      await saveToLocalDraft('pending_sync');
-      alert('มีข้อผิดพลาด: เซฟข้อมูลแบบออฟไลน์เก็บลงในเครื่องไว้เรียบร้อยแล้ว');
-      router.push('/');
+      showPopup('error', 'ข้อผิดพลาด', 'เกิดข้อผิดพลาดในการบันทึกข้อมูลแบบสำรวจลงในเครื่อง');
     } finally {
       setIsSubmitting(false);
     }
@@ -2386,28 +2349,28 @@ function SurveyWizardForm() {
       
       {/* Custom beautiful popup modal overlay */}
       {modalConfig && modalConfig.show && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl border border-slate-100 flex flex-col items-center text-center space-y-4 animate-scaleUp">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-              modalConfig.type === 'success' ? 'bg-emerald-50 text-emerald-600' :
-              modalConfig.type === 'confirm' ? 'bg-indigo-50 text-indigo-600' :
-              modalConfig.type === 'warning' ? 'bg-amber-50 text-amber-600' :
-              modalConfig.type === 'error' ? 'bg-rose-50 text-rose-600' :
-              'bg-blue-50 text-blue-600'
+        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 transition-all duration-300">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl border border-slate-100 flex flex-col items-center text-center space-y-5 animate-scaleUp">
+            <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-xs ${
+              modalConfig.type === 'success' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+              modalConfig.type === 'confirm' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' :
+              modalConfig.type === 'warning' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+              modalConfig.type === 'error' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+              'bg-blue-50 text-blue-600 border border-blue-100'
             }`}>
-              {modalConfig.type === 'success' && <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />}
-              {modalConfig.type === 'confirm' && <HelpCircle className="w-6 h-6 stroke-[2.5]" />}
-              {modalConfig.type === 'warning' && <AlertTriangle className="w-6 h-6 stroke-[2.5]" />}
-              {modalConfig.type === 'error' && <XCircle className="w-6 h-6 stroke-[2.5]" />}
-              {modalConfig.type === 'info' && <Info className="w-6 h-6 stroke-[2.5]" />}
+              {modalConfig.type === 'success' && <CheckCircle2 className="w-7 h-7 stroke-[2.5]" />}
+              {modalConfig.type === 'confirm' && <HelpCircle className="w-7 h-7 stroke-[2.5]" />}
+              {modalConfig.type === 'warning' && <AlertTriangle className="w-7 h-7 stroke-[2.5]" />}
+              {modalConfig.type === 'error' && <XCircle className="w-7 h-7 stroke-[2.5]" />}
+              {modalConfig.type === 'info' && <Info className="w-7 h-7 stroke-[2.5]" />}
             </div>
             
-            <div className="space-y-1">
-              <h3 className="font-bold text-slate-800 text-base">{modalConfig.title}</h3>
-              <p className="text-slate-500 text-xs md:text-sm leading-relaxed">{modalConfig.message}</p>
+            <div className="space-y-1.5">
+              <h3 className="font-bold text-slate-800 text-base md:text-lg leading-tight">{modalConfig.title}</h3>
+              <p className="text-slate-500 text-xs md:text-sm leading-relaxed px-1">{modalConfig.message}</p>
             </div>
 
-            <div className="flex gap-2 w-full pt-2">
+            <div className="flex gap-2.5 w-full pt-3 border-t border-slate-100">
               {modalConfig.type === 'confirm' ? (
                 <>
                   <button
@@ -2416,7 +2379,7 @@ function SurveyWizardForm() {
                       setModalConfig(null);
                       if (modalConfig.onCancel) modalConfig.onCancel();
                     }}
-                    className="flex-1 py-2 px-3 border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-650 text-xs font-semibold transition"
+                    className="flex-1 py-2 px-3 border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-650 text-xs font-semibold transition active:scale-95"
                   >
                     ยกเลิก
                   </button>
@@ -2426,7 +2389,7 @@ function SurveyWizardForm() {
                       setModalConfig(null);
                       if (modalConfig.onConfirm) modalConfig.onConfirm();
                     }}
-                    className="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition shadow-sm"
+                    className="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition shadow-sm active:scale-95"
                   >
                     ตกลง
                   </button>
@@ -2438,7 +2401,7 @@ function SurveyWizardForm() {
                     setModalConfig(null);
                     if (modalConfig.onConfirm) modalConfig.onConfirm();
                   }}
-                  className={`w-full py-2 px-4 text-white rounded-xl text-xs font-bold transition shadow-sm ${
+                  className={`w-full py-2 px-4 text-white rounded-xl text-xs font-bold transition shadow-sm active:scale-95 ${
                     modalConfig.type === 'success' ? 'bg-emerald-600 hover:bg-emerald-700' :
                     modalConfig.type === 'error' ? 'bg-rose-600 hover:bg-rose-700' :
                     modalConfig.type === 'warning' ? 'bg-amber-500 hover:bg-amber-600' :

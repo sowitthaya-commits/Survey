@@ -410,8 +410,9 @@ export default function Dashboard() {
                           </button>
 
                           {(() => {
-                            const isRealDoc = !!(survey.docUrl && (survey.docUrl.includes('spreadsheets/d/') || survey.docUrl.includes('drive.google.com/')));
-                            const isRealPdf = !!(survey.pdfUrl && survey.pdfUrl.includes('drive.google.com/'));
+                            const isGenerating = survey.status === 'generating' || survey.status === 'pending_sync';
+                            const isRealDoc = !isGenerating && !!(survey.docUrl && (survey.docUrl.includes('spreadsheets/d/') || survey.docUrl.includes('drive.google.com/')));
+                            const isRealPdf = !isGenerating && !!(survey.pdfUrl && survey.pdfUrl.includes('drive.google.com/'));
                             
                             return (
                               <>
@@ -425,7 +426,7 @@ export default function Dashboard() {
                                       : 'bg-slate-100 text-slate-300 cursor-not-allowed'
                                   }`}
                                   onClick={(e) => !isRealDoc && e.preventDefault()}
-                                  title={isRealDoc ? "ลิงก์ Google Sheets เอกสารสรุป" : "ยังไม่ได้สร้างสเปรดชีตสรุป (กรุณากดแก้ไขและกดบันทึกสร้างรายงาน)"}
+                                  title={isGenerating ? "กำลังอัปเดตเอกสารในเบื้องหลัง กรุณารอสักครู่..." : isRealDoc ? "ลิงก์ Google Sheets เอกสารสรุป" : "ยังไม่ได้สร้างสเปรดชีตสรุป (กรุณากดแก้ไขและกดบันทึกสร้างรายงาน)"}
                                 >
                                   <FileText className="w-4 h-4" />
                                 </a>
@@ -440,7 +441,7 @@ export default function Dashboard() {
                                       : 'bg-slate-100 text-slate-300 cursor-not-allowed'
                                   }`}
                                   onClick={(e) => !isRealPdf && e.preventDefault()}
-                                  title={isRealPdf ? "ดาวน์โหลดสรุปเป็น PDF" : "ยังไม่ได้สร้าง PDF รายงาน (กรุณากดแก้ไขและกดบันทึกสร้างรายงาน)"}
+                                  title={isGenerating ? "กำลังสร้าง PDF ในเบื้องหลัง กรุณารอสักครู่..." : isRealPdf ? "ดาวน์โหลดสรุปเป็น PDF" : "ยังไม่ได้สร้าง PDF รายงาน (กรุณากดแก้ไขและกดบันทึกสร้างรายงาน)"}
                                 >
                                   <Download className="w-4 h-4" />
                                 </a>
@@ -592,28 +593,28 @@ export default function Dashboard() {
 
       {/* Custom Popup Modal */}
       {modalConfig && modalConfig.show && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl border border-slate-100 flex flex-col items-center text-center space-y-4 animate-scaleUp">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-              modalConfig.type === 'success' ? 'bg-emerald-50 text-emerald-600' :
-              modalConfig.type === 'confirm' ? 'bg-indigo-50 text-indigo-600' :
-              modalConfig.type === 'warning' ? 'bg-amber-50 text-amber-600' :
-              modalConfig.type === 'error' ? 'bg-rose-50 text-rose-600' :
-              'bg-blue-50 text-blue-600'
+        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 transition-all duration-300">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl border border-slate-100 flex flex-col items-center text-center space-y-5 animate-scaleUp">
+            <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-xs ${
+              modalConfig.type === 'success' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+              modalConfig.type === 'confirm' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' :
+              modalConfig.type === 'warning' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+              modalConfig.type === 'error' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+              'bg-blue-50 text-blue-600 border border-blue-100'
             }`}>
-              {modalConfig.type === 'success' && <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />}
-              {modalConfig.type === 'confirm' && <HelpCircle className="w-6 h-6 stroke-[2.5]" />}
-              {modalConfig.type === 'warning' && <AlertTriangle className="w-6 h-6 stroke-[2.5]" />}
-              {modalConfig.type === 'error' && <XCircle className="w-6 h-6 stroke-[2.5]" />}
-              {modalConfig.type === 'info' && <Info className="w-6 h-6 stroke-[2.5]" />}
+              {modalConfig.type === 'success' && <CheckCircle2 className="w-7 h-7 stroke-[2.5]" />}
+              {modalConfig.type === 'confirm' && <HelpCircle className="w-7 h-7 stroke-[2.5]" />}
+              {modalConfig.type === 'warning' && <AlertTriangle className="w-7 h-7 stroke-[2.5]" />}
+              {modalConfig.type === 'error' && <XCircle className="w-7 h-7 stroke-[2.5]" />}
+              {modalConfig.type === 'info' && <Info className="w-7 h-7 stroke-[2.5]" />}
             </div>
             
-            <div className="space-y-1">
-              <h3 className="font-bold text-slate-800 text-base">{modalConfig.title}</h3>
-              <p className="text-slate-500 text-xs md:text-sm leading-relaxed">{modalConfig.message}</p>
+            <div className="space-y-1.5">
+              <h3 className="font-bold text-slate-800 text-base md:text-lg leading-tight">{modalConfig.title}</h3>
+              <p className="text-slate-500 text-xs md:text-sm leading-relaxed px-1">{modalConfig.message}</p>
             </div>
 
-            <div className="flex gap-2 w-full pt-2">
+            <div className="flex gap-2.5 w-full pt-3 border-t border-slate-100">
               {modalConfig.type === 'confirm' ? (
                 <>
                   <button
@@ -622,7 +623,7 @@ export default function Dashboard() {
                       setModalConfig(null);
                       if (modalConfig.onCancel) modalConfig.onCancel();
                     }}
-                    className="flex-1 py-2 px-3 border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-650 text-xs font-semibold transition"
+                    className="flex-1 py-2 px-3 border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-650 text-xs font-semibold transition active:scale-95"
                   >
                     ยกเลิก
                   </button>
@@ -632,7 +633,7 @@ export default function Dashboard() {
                       setModalConfig(null);
                       if (modalConfig.onConfirm) modalConfig.onConfirm();
                     }}
-                    className="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition shadow-sm"
+                    className="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition shadow-sm active:scale-95"
                   >
                     ตกลง
                   </button>
@@ -644,7 +645,7 @@ export default function Dashboard() {
                     setModalConfig(null);
                     if (modalConfig.onConfirm) modalConfig.onConfirm();
                   }}
-                  className={`w-full py-2 px-4 text-white rounded-xl text-xs font-bold transition shadow-sm ${
+                  className={`w-full py-2 px-4 text-white rounded-xl text-xs font-bold transition shadow-sm active:scale-95 ${
                     modalConfig.type === 'success' ? 'bg-emerald-600 hover:bg-emerald-700' :
                     modalConfig.type === 'error' ? 'bg-rose-600 hover:bg-rose-700' :
                     modalConfig.type === 'warning' ? 'bg-amber-500 hover:bg-amber-600' :
