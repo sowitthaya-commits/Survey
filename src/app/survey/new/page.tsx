@@ -525,36 +525,46 @@ function SurveyWizardForm() {
       });
     };
 
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const rawBase64 = reader.result as string;
-        const base64Str = await compressLocal(rawBase64);
-
-        const newImage: RoomImage = {
-          id: uuidv4(),
-          step,
-          originalImage: base64Str,
-          annotatedImage: base64Str,
-          description: '',
-          createdAt: new Date().toISOString()
+    const newImages: RoomImage[] = [];
+    const promises = Array.from(files).map(file => {
+      return new Promise<void>((resolvePromise) => {
+        const reader = new FileReader();
+        reader.onload = async () => {
+          try {
+            const rawBase64 = reader.result as string;
+            const base64Str = await compressLocal(rawBase64);
+            newImages.push({
+              id: uuidv4(),
+              step,
+              originalImage: base64Str,
+              annotatedImage: base64Str,
+              description: '',
+              createdAt: new Date().toISOString()
+            });
+          } catch (err) {
+            console.error('File compression error:', err);
+          } finally {
+            resolvePromise();
+          }
         };
+        reader.readAsDataURL(file);
+      });
+    });
 
-        if (roomIndex === -1) {
-          setExistingImages(prev => [...prev, newImage]);
-        } else {
-          setRooms(prev => {
-            const copy = [...prev];
-            const images = copy[roomIndex].images || [];
-            copy[roomIndex] = {
-              ...copy[roomIndex],
-              images: [...images, newImage]
-            };
-            return copy;
-          });
-        }
-      };
-      reader.readAsDataURL(file);
+    Promise.all(promises).then(() => {
+      if (roomIndex === -1) {
+        setExistingImages(prev => [...prev, ...newImages]);
+      } else {
+        setRooms(prev => {
+          const copy = [...prev];
+          const images = copy[roomIndex].images || [];
+          copy[roomIndex] = {
+            ...copy[roomIndex],
+            images: [...images, ...newImages]
+          };
+          return copy;
+        });
+      }
     });
   };
 
