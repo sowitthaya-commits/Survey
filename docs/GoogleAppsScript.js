@@ -578,20 +578,21 @@ function doPost(e) {
           doc.saveAndClose();
         }
         
-        const pdfBlob = newDocFile.getAs('application/pdf');
-        pdfBlob.setName(targetFileName + '.pdf');
-        const newPdfFile = targetFolder.createFile(pdfBlob);
-        newPdfFile.setName(targetFileName + '.pdf');
+        docUrl = 'https://docs.google.com/spreadsheets/d/' + newDocFile.getId() + '/edit?usp=sharing';
+        pdfUrl = 'https://docs.google.com/spreadsheets/d/' + newDocFile.getId() + '/export?format=pdf';
         
         try {
-          newDocFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.EDIT);
-          newPdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-        } catch (shareErr) {
-          console.warn("Could not set sharing permissions (corporate domain policy restriction): " + shareErr.toString());
+          const pdfBlob = newDocFile.getAs('application/pdf');
+          pdfBlob.setName(targetFileName + '.pdf');
+          const newPdfFile = targetFolder.createFile(pdfBlob);
+          newPdfFile.setName(targetFileName + '.pdf');
+          try {
+            newPdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+          } catch (se) {}
+          pdfUrl = 'https://drive.google.com/file/d/' + newPdfFile.getId() + '/view?usp=sharing';
+        } catch (pdfErr) {
+          console.warn('PDF blob conversion note: using Google Sheets direct PDF export URL: ' + pdfErr.toString());
         }
-        
-        docUrl = 'https://docs.google.com/spreadsheets/d/' + newDocFile.getId() + '/edit?usp=sharing';
-        pdfUrl = 'https://drive.google.com/file/d/' + newPdfFile.getId() + '/view?usp=sharing';
 
         // ค้นหาหรือสร้างโฟลเดอร์รูปภาพของโครงการเพื่อส่งกลับไปให้ระบบนำไปเปิดดูใน Gallery
         let imagesFolderUrl = '';

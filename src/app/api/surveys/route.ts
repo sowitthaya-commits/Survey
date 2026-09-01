@@ -265,15 +265,24 @@ export async function POST(request: Request) {
           if (res.ok) {
             const data = await res.json();
             if (data.success && (data.docUrl || data.pdfUrl)) {
+              const resDocUrl = data.docUrl || null;
+              let resPdfUrl = data.pdfUrl || null;
+              if (!resPdfUrl && resDocUrl && resDocUrl.includes('/spreadsheets/d/')) {
+                const match = resDocUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+                if (match && match[1]) {
+                  resPdfUrl = `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=pdf`;
+                }
+              }
+
               await db.update(surveys)
                 .set({
-                  docUrl: data.docUrl || null,
-                  pdfUrl: data.pdfUrl || null,
+                  docUrl: resDocUrl,
+                  pdfUrl: resPdfUrl,
                   status: 'completed',
                   updatedAt: new Date().toISOString(),
                 })
                 .where(eq(surveys.id, id));
-              console.log('Background: Successfully saved docUrl/pdfUrl from Apps Script into DB');
+              console.log('Background: Successfully saved docUrl/pdfUrl from Apps Script into DB:', { resDocUrl, resPdfUrl });
             }
           }
         }).catch((err) => {

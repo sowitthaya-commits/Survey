@@ -411,7 +411,12 @@ export default function Dashboard() {
                           {(() => {
                             const isGenerating = survey.status === 'generating' || survey.status === 'pending_sync';
                             const isRealDoc = !isGenerating && !!survey.docUrl && survey.docUrl.startsWith('http');
-                            const isRealPdf = !isGenerating && !!survey.pdfUrl && (survey.pdfUrl.startsWith('http') || survey.pdfUrl.startsWith('/uploads/'));
+                            
+                            // Auto-derive PDF download URL if docUrl is a Google Spreadsheet
+                            const effectivePdfUrl = survey.pdfUrl || (survey.docUrl && survey.docUrl.includes('/spreadsheets/d/') 
+                              ? survey.docUrl.replace(/\/edit.*$/, '/export?format=pdf') 
+                              : null);
+                            const isRealPdf = !isGenerating && !!effectivePdfUrl && effectivePdfUrl.startsWith('http');
                             
                             return (
                               <>
@@ -431,7 +436,7 @@ export default function Dashboard() {
                                 </a>
 
                                 <a
-                                  href={isRealPdf ? survey.pdfUrl! : '#'}
+                                  href={isRealPdf ? effectivePdfUrl! : '#'}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className={`p-2 rounded-lg transition-all ${
