@@ -98,7 +98,7 @@ export default function Dashboard() {
     if ((hasGenerating || syncing) && isOnline) {
       const interval = setInterval(() => {
         loadAllSurveys(true); // silent polling
-      }, 3000);
+      }, 2000);
       return () => clearInterval(interval);
     }
   }, [surveys, isOnline, syncing]);

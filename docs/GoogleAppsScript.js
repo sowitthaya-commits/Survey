@@ -123,6 +123,12 @@ function doPost(e) {
       const docFile = findLatestProjectFile(targetFolder, projectName, false);
       if (docFile) {
         docUrl = 'https://docs.google.com/spreadsheets/d/' + docFile.getId() + '/edit?usp=sharing';
+      }
+      
+      const pdfFile = findLatestProjectFile(targetFolder, projectName, true);
+      if (pdfFile) {
+        pdfUrl = 'https://drive.google.com/file/d/' + pdfFile.getId() + '/view?usp=sharing';
+      } else if (docFile) {
         pdfUrl = 'https://docs.google.com/spreadsheets/d/' + docFile.getId() + '/export?format=pdf';
       }
       
@@ -515,6 +521,21 @@ function doPost(e) {
 
         docUrl = 'https://docs.google.com/spreadsheets/d/' + newDocFile.getId() + '/edit?usp=sharing';
         pdfUrl = 'https://docs.google.com/spreadsheets/d/' + newDocFile.getId() + '/export?format=pdf';
+
+        try {
+          SpreadsheetApp.flush();
+          const pdfBlob = newDocFile.getAs('application/pdf');
+          pdfBlob.setName(targetFileName + '.pdf');
+          const newPdfFile = targetFolder.createFile(pdfBlob);
+          newPdfFile.setName(targetFileName + '.pdf');
+          try {
+            newPdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+          } catch (se) {}
+          pdfUrl = 'https://drive.google.com/file/d/' + newPdfFile.getId() + '/view?usp=sharing';
+          console.log('Successfully created PDF in Google Drive: ' + pdfUrl);
+        } catch (pdfErr) {
+          console.warn('PDF file creation note (using direct export URL): ' + pdfErr.toString());
+        }
 
         // ค้นหาหรือสร้างโฟลเดอร์รูปภาพของโครงการเพื่อส่งกลับไปให้ระบบนำไปเปิดดูใน Gallery
         let imagesFolderUrl = '';
