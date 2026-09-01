@@ -21,7 +21,7 @@ interface SurveyItem {
   customerName: string;
   salesPersonName?: string;
   salesPersonId?: number;
-  status: 'draft' | 'pending_sync' | 'generating' | 'completed' | 'synced';
+  status: 'draft' | 'pending_sync' | 'generating' | 'completed' | 'synced' | 'deleted';
   docUrl: string | null;
   pdfUrl: string | null;
   createdAt: string;
@@ -183,7 +183,7 @@ export default function Dashboard() {
     showPopup(
       'confirm',
       'ยืนยันการลบข้อมูล',
-      'คุณต้องการลบข้อมูลแบบสำรวจนี้พร้อมรูปภาพและเอกสารทั้งหมดใช่หรือไม่?',
+      'คุณต้องการลบข้อมูลแบบสำรวจนี้ออกจากแดชบอร์ดใช่หรือไม่?\n(รูปภาพของโครงการจะยังคงถูกเก็บรักษาไว้ใน "คลังรูปภาพ" และผู้ดูแลระบบสามารถกู้คืนได้ตลอดเวลา)',
       async () => {
         try {
           if (status === 'draft' || status === 'pending_sync') {
@@ -200,7 +200,7 @@ export default function Dashboard() {
             });
 
             if (res.ok) {
-              showPopup('success', 'ลบสำเร็จ', 'ลบข้อมูลจากระบบและ Google Drive เรียบร้อยแล้ว');
+              showPopup('success', 'ลบสำเร็จ', 'ลบโครงการออกจากแดชบอร์ดเรียบร้อยแล้ว (รูปภาพยังคงถูกเก็บรักษาไว้ในคลังรูปภาพ)');
             } else {
               showPopup('error', 'ข้อผิดพลาด', 'ไม่สามารถลบข้อมูลจากเซิร์ฟเวอร์ได้');
             }

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import {
   LayoutDashboard,
   Plus,
+  Images,
   Database,
   LogOut,
   Pin,
@@ -135,6 +136,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   const navItems = [
     { href: '/', name: 'แดชบอร์ด', icon: LayoutDashboard },
     { href: '/survey/new', name: 'เพิ่มแบบสำรวจใหม่', icon: Plus },
+    { href: '/gallery', name: 'คลังรูปภาพ', icon: Images },
     { href: '/master', name: 'ตั้งค่าข้อมูลหลัก', icon: Database, adminOnly: true },
   ];
 
@@ -143,6 +145,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   const getPageTitle = () => {
     if (pathname === '/') return 'แดชบอร์ดแบบสำรวจ';
     if (pathname === '/survey/new' || pathname.startsWith('/survey/new')) return 'ทำรายการบันทึกแบบสำรวจ';
+    if (pathname === '/gallery' || pathname.startsWith('/gallery')) return 'คลังรูปภาพหน้างาน';
     if (pathname === '/master') return 'จัดการการตั้งค่าข้อมูลหลัก';
     return 'ระบบสำรวจหน้างาน';
   };

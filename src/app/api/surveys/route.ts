@@ -12,6 +12,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
+    const includeDeleted = searchParams.get('includeDeleted') === 'true';
 
     let query = db.select({
       id: surveys.id,
@@ -49,6 +50,11 @@ export async function GET(request: Request) {
       );
     } else {
       results = await query;
+    }
+
+    // กรองไม่เอางานที่ถูกลบสำหรับหน้า Dashboard ปกติ (เว้นแต่จะระบุ includeDeleted=true สำหรับ Gallery)
+    if (!includeDeleted) {
+      results = results.filter(r => r.status !== 'deleted');
     }
 
     const parsedResults = results.map(row => ({
@@ -245,31 +251,68 @@ export async function POST(request: Request) {
   }
 }
 
-// DELETE a survey and its uploaded files
+// DELETE: Soft delete survey to preserve photos for Gallery, or permanent delete if specified
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
+    const permanent = searchParams.get('permanent') === 'true';
 
     if (!id) {
       return NextResponse.json({ error: 'Survey ID is required' }, { status: 400 });
     }
 
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', id);
-    if (fs.existsSync(uploadDir)) {
-      fs.rmSync(uploadDir, { recursive: true, force: true });
+    if (permanent) {
+      const uploadDir = path.join(process.cwd(), 'public', 'uploads', id);
+      if (fs.existsSync(uploadDir)) {
+        fs.rmSync(uploadDir, { recursive: true, force: true });
+      }
+
+      const result = await db.delete(surveys).where(eq(surveys.id, id)).run();
+      const affected = (result as any).rowsAffected !== undefined ? (result as any).rowsAffected : (result as any).changes;
+
+      if (affected === 0) {
+        return NextResponse.json({ error: 'Survey not found' }, { status: 404 });
+      }
+
+      return NextResponse.json({ success: true, permanent: true });
+    } else {
+      // Soft Delete: ซ่อนออกจากแดชบอร์ด แต่ยังคงรูปภาพและข้อมูลไว้ให้ดูในคลังรูปภาพและให้ Admin กู้คืนได้
+      await db.update(surveys).set({
+        status: 'deleted',
+        updatedAt: new Date().toISOString()
+      }).where(eq(surveys.id, id)).run();
+
+      return NextResponse.json({ success: true, softDeleted: true });
     }
-
-    const result = await db.delete(surveys).where(eq(surveys.id, id)).run();
-    const affected = (result as any).rowsAffected !== undefined ? (result as any).rowsAffected : (result as any).changes;
-
-    if (affected === 0) {
-      return NextResponse.json({ error: 'Survey not found' }, { status: 404 });
-    }
-
-    return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Error deleting survey:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// PUT: Restore a deleted survey back to active/synced status
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json();
+    const { id, action } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: 'Survey ID is required' }, { status: 400 });
+    }
+
+    if (action === 'restore') {
+      await db.update(surveys).set({
+        status: 'synced',
+        updatedAt: new Date().toISOString()
+      }).where(eq(surveys.id, id)).run();
+
+      return NextResponse.json({ success: true, message: 'กู้คืนโครงการสำเร็จแล้ว' });
+    }
+
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+  } catch (error: any) {
+    console.error('Error restoring survey:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
