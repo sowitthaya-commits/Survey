@@ -532,7 +532,9 @@ function doPost(e) {
         }
         
         const pdfBlob = newDocFile.getAs('application/pdf');
+        pdfBlob.setName(targetFileName + '.pdf');
         const newPdfFile = targetFolder.createFile(pdfBlob);
+        newPdfFile.setName(targetFileName + '.pdf');
         
         try {
           newDocFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.EDIT);
@@ -541,8 +543,8 @@ function doPost(e) {
           console.warn("Could not set sharing permissions (corporate domain policy restriction): " + shareErr.toString());
         }
         
-        docUrl = newDocFile.getUrl();
-        pdfUrl = newPdfFile.getUrl();
+        docUrl = 'https://docs.google.com/spreadsheets/d/' + newDocFile.getId() + '/edit?usp=sharing';
+        pdfUrl = 'https://drive.google.com/file/d/' + newPdfFile.getId() + '/view?usp=sharing';
 
         // ค้นหาหรือสร้างโฟลเดอร์รูปภาพของโครงการเพื่อส่งกลับไปให้ระบบนำไปเปิดดูใน Gallery
         let imagesFolderUrl = '';

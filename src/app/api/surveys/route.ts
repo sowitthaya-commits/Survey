@@ -7,6 +7,9 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { uploadFileToDrive } from '@/lib/driveHelper';
 
+export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
+
 // GET all surveys or search
 export async function GET(request: Request) {
   try {
@@ -169,8 +172,8 @@ export async function POST(request: Request) {
     // Trigger Apps Script and PDF creation asynchronously ONLY if explicitly requested
     if (shouldGenerateReport) {
       after(async () => {
-        let docUrl = null;
-        let pdfUrl = null;
+        let docUrl: string | null = null;
+        let pdfUrl: string | null = null;
 
         const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
         if (scriptUrl) {
@@ -178,6 +181,7 @@ export async function POST(request: Request) {
             console.log('Background: Requesting Google Apps Script Web App to create report...');
             const response = await fetch(scriptUrl, {
               method: 'POST',
+              redirect: 'follow',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 action: 'createReport',
@@ -204,8 +208,8 @@ export async function POST(request: Request) {
             if (response.ok) {
               const data = await response.json();
               if (data.success) {
-                docUrl = data.docUrl;
-                pdfUrl = data.pdfUrl;
+                docUrl = data.docUrl || null;
+                pdfUrl = data.pdfUrl || null;
                 console.log('Background: Apps Script report generated successfully:', { docUrl, pdfUrl });
               } else {
                 console.warn('Background: Apps Script report generation failed:', data.error);
@@ -218,34 +222,22 @@ export async function POST(request: Request) {
           }
         }
 
-        // If Apps Script failed, fall back to mock links so execution completes
-        const finalDocUrl = docUrl || `https://docs.google.com/document/d/${uuidv4().substring(0, 16)}/edit?usp=drivesdk`;
-        const finalPdfUrl = pdfUrl || `/uploads/${id}/survey_report_${id.substring(0, 8)}.pdf`;
+        // Only save authentic URLs returned from Google Apps Script (never fake mock links)
+        const finalDocUrl = docUrl || existing?.docUrl || null;
+        const finalPdfUrl = pdfUrl || existing?.pdfUrl || null;
+        const finalStatus = docUrl || pdfUrl ? 'completed' : (existing?.docUrl ? 'completed' : 'synced');
 
-        if (!pdfUrl) {
-          try {
-            const uploadDir = path.join(process.cwd(), 'public', 'uploads', id);
-            if (!fs.existsSync(uploadDir)) {
-              fs.mkdirSync(uploadDir, { recursive: true });
-            }
-            const pdfPath = path.join(uploadDir, `survey_report_${id.substring(0, 8)}.pdf`);
-            fs.writeFileSync(pdfPath, `%PDF-1.4\n% MOCKED SURVEY REPORT FOR ${surveyData.projectName}\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << >> /Contents 4 0 R >>\nendobj\n4 0 obj\n<< /Length 50 >>\nstream\nBT /F1 12 Tf 70 700 Td (Mock Survey PDF Report for Multi-Room Layout) Tj ET\nendstream\nendobj\nxref\n0 5\n0000000000 65535 f\n0000000009 00000 n\n0000000062 00000 n\n0000000119 00000 n\n0000000216 00000 n\ntrailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n315\n%%EOF`);
-          } catch (fsErr) {
-            console.warn('Background Warning: Could not write mock PDF to local read-only filesystem:', fsErr);
-          }
-        }
-
-        // Update survey with URLs and completed status
+        // Update survey with real URLs and completed status
         await db.update(surveys)
           .set({
             docUrl: finalDocUrl,
             pdfUrl: finalPdfUrl,
-            status: 'completed',
+            status: finalStatus,
             updatedAt: new Date().toISOString(),
           })
           .where(eq(surveys.id, id));
           
-        console.log('Background: Survey status updated to completed.');
+        console.log(`Background: Survey status updated to ${finalStatus} with docUrl: ${finalDocUrl}, pdfUrl: ${finalPdfUrl}`);
       });
     }
 
