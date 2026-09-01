@@ -162,6 +162,39 @@ export default function Dashboard() {
       mergedList.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
       
       setSurveys(mergedList);
+
+      // Auto-recover URLs for surveys that are generating or missing docUrl if files exist in Google Drive
+      if (isOnline) {
+        serverSurveys.forEach(async (s) => {
+          if (s.status === 'generating' || (!s.docUrl && s.status === 'completed')) {
+            try {
+              const res = await fetch('/api/surveys', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'syncDrive',
+                  id: s.id,
+                  projectName: s.projectName,
+                  customerName: s.customerName
+                })
+              });
+              if (res.ok) {
+                const data = await res.json();
+                if (data.success && data.found) {
+                  setSurveys(prev => prev.map(item => item.id === s.id ? {
+                    ...item,
+                    status: 'completed',
+                    docUrl: data.docUrl,
+                    pdfUrl: data.pdfUrl
+                  } : item));
+                }
+              }
+            } catch (err) {
+              console.warn('Sync drive check skipped:', err);
+            }
+          }
+        });
+      }
     } catch (error) {
       console.error('Error loading surveys:', error);
     } finally {
@@ -396,7 +429,7 @@ export default function Dashboard() {
                         {(survey.roomsData || []).length} ห้อง / จุด
                       </td>
                       <td className="py-4 px-6">
-                        {renderStatusBadge(survey.status)}
+                        {renderStatusBadge(survey)}
                       </td>
                       <td className="py-4 px-6 text-right">
                         <div className="flex justify-end gap-1.5">
@@ -684,8 +717,8 @@ export default function Dashboard() {
     </div>
   );
 
-  function renderStatusBadge(status: string) {
-    switch (status) {
+  function renderStatusBadge(survey: SurveyItem) {
+    switch (survey.status) {
       case 'completed':
       case 'synced':
         return (
@@ -696,10 +729,38 @@ export default function Dashboard() {
         );
       case 'generating':
         return (
-          <span className="inline-flex items-center gap-1 bg-[#4f46e5]/10 text-[#4338ca] text-[11px] font-bold px-2 py-0.5 rounded-full border border-[#4f46e5]/20">
+          <button
+            type="button"
+            onClick={async (e) => {
+              e.stopPropagation();
+              try {
+                const res = await fetch('/api/surveys', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    action: 'syncDrive',
+                    id: survey.id,
+                    projectName: survey.projectName,
+                    customerName: survey.customerName
+                  })
+                });
+                const data = await res.json();
+                if (data.success && data.found) {
+                  showPopup('success', 'เชื่อมต่อไฟล์สำเร็จ', 'พบไฟล์เอกสารบน Google Drive และทำการเชื่อมต่อลิงก์เรียบร้อยแล้ว!');
+                  loadAllSurveys(true);
+                } else {
+                  showPopup('info', 'กำลังประมวลผล', 'ระบบกำลังสร้างไฟล์บน Google Drive กรุณารอสักครู่...');
+                }
+              } catch (err) {
+                console.error(err);
+              }
+            }}
+            className="inline-flex items-center gap-1 bg-[#4f46e5]/10 hover:bg-[#4f46e5]/20 text-[#4338ca] text-[11px] font-bold px-2 py-0.5 rounded-full border border-[#4f46e5]/20 transition cursor-pointer"
+            title="คลิกเพื่อตรวจสอบ/ดึงลิงก์จาก Google Drive ทันที"
+          >
             <Loader2 className="w-3 h-3 animate-spin" />
-            กำลังสร้าง Docs/PDF
-          </span>
+            กำลังสร้าง (คลิกเพื่อดึงลิงก์)
+          </button>
         );
       case 'pending_sync':
         return (

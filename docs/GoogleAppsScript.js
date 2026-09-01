@@ -87,6 +87,39 @@ function doPost(e) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
+    // ACTION: FIND EXISTING REPORT IN GOOGLE DRIVE
+    if (action === 'findReport') {
+      const projectName = postData.projectName || '';
+      const customerName = postData.customerName || '';
+      const targetFolder = DriveApp.getFolderById(DOCUMENT_FOLDER_ID);
+      const targetFileName = 'รายงานการสำรวจ - ' + projectName + ' (' + customerName + ')';
+      
+      let docUrl = '';
+      let pdfUrl = '';
+      
+      try {
+        const docs = targetFolder.getFilesByName(targetFileName);
+        if (docs.hasNext()) {
+          const docFile = docs.next();
+          docUrl = 'https://docs.google.com/spreadsheets/d/' + docFile.getId() + '/edit?usp=sharing';
+        }
+        const pdfs = targetFolder.getFilesByName(targetFileName + '.pdf');
+        if (pdfs.hasNext()) {
+          const pdfFile = pdfs.next();
+          pdfUrl = 'https://drive.google.com/file/d/' + pdfFile.getId() + '/view?usp=sharing';
+        }
+      } catch (err) {
+        console.warn('Error finding report in Drive: ' + err.toString());
+      }
+      
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        found: !!(docUrl || pdfUrl),
+        docUrl: docUrl,
+        pdfUrl: pdfUrl
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
     // ACTION: CREATE REPORT DOC & PDF
     if (action === 'createReport') {
       const projectName = postData.projectName || 'ไม่ได้ระบุ';

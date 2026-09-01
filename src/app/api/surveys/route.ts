@@ -79,6 +79,61 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+
+    // ACTION: SYNC / RECOVER URLS DIRECTLY FROM GOOGLE DRIVE
+    if (body.action === 'syncDrive') {
+      const { id, projectName, customerName } = body;
+      if (!id) {
+        return NextResponse.json({ error: 'Survey ID is required' }, { status: 400 });
+      }
+
+      const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
+      if (scriptUrl) {
+        try {
+          console.log(`Syncing report URLs from Google Drive for project: ${projectName}...`);
+          const res = await fetch(scriptUrl, {
+            method: 'POST',
+            redirect: 'follow',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'findReport',
+              projectName: projectName,
+              customerName: customerName
+            })
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && (data.docUrl || data.pdfUrl)) {
+              await db.update(surveys)
+                .set({
+                  docUrl: data.docUrl || null,
+                  pdfUrl: data.pdfUrl || null,
+                  status: 'completed',
+                  updatedAt: new Date().toISOString(),
+                })
+                .where(eq(surveys.id, id));
+
+              return NextResponse.json({
+                success: true,
+                found: true,
+                docUrl: data.docUrl,
+                pdfUrl: data.pdfUrl,
+                status: 'completed'
+              });
+            }
+          }
+        } catch (syncErr) {
+          console.error('Error querying Google Drive for report:', syncErr);
+        }
+      }
+
+      return NextResponse.json({
+        success: false,
+        message: 'Could not find report files on Google Drive'
+      });
+    }
+
     const { id, roomsData, existingImages, salesPersonName, generateReport, ...surveyData } = body;
 
     if (!id) {
@@ -142,7 +197,60 @@ export async function POST(request: Request) {
 
     // Determine if we should generate/recreate the Google Sheets report
     const shouldGenerateReport = generateReport === true || (!existing && surveyData.status === 'pending_sync');
-    const targetStatus = shouldGenerateReport ? 'generating' : (surveyData.status || existing?.status || 'completed');
+    let targetStatus = shouldGenerateReport ? 'generating' : (surveyData.status || existing?.status || 'completed');
+    let docUrl: string | null = existing?.docUrl || null;
+    let pdfUrl: string | null = existing?.pdfUrl || null;
+
+    // Trigger Apps Script report creation DIRECTLY during request so DB is guaranteed to update
+    if (shouldGenerateReport) {
+      const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
+      if (scriptUrl) {
+        try {
+          console.log('Requesting Google Apps Script Web App to create report...');
+          const response = await fetch(scriptUrl, {
+            method: 'POST',
+            redirect: 'follow',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'createReport',
+              oldDocUrl: existing?.docUrl || null,
+              oldPdfUrl: existing?.pdfUrl || null,
+              projectName: surveyData.projectName || body.projectName,
+              customerName: surveyData.customerName || body.customerName,
+              budget: surveyData.budget || body.budget,
+              salesPersonName: salesPersonName || body.salesPersonName,
+              surveyDate: surveyData.surveyDate || body.surveyDate,
+              requestDate: surveyData.requestDate || body.requestDate,
+              quotationDeadline: surveyData.quotationDeadline || body.quotationDeadline,
+              contactName: surveyData.contactName || body.contactName,
+              contactPhone: surveyData.contactPhone || body.contactPhone,
+              locationAddress: surveyData.locationAddress || body.locationAddress,
+              locationLat: surveyData.locationLat || body.locationLat,
+              locationLng: surveyData.locationLng || body.locationLng,
+              roomsData: rooms,
+              existingImages: existingImagesList,
+              id: id
+            })
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+              docUrl = data.docUrl || docUrl;
+              pdfUrl = data.pdfUrl || pdfUrl;
+              targetStatus = 'completed';
+              console.log('Apps Script report generated successfully:', { docUrl, pdfUrl });
+            } else {
+              console.warn('Apps Script report generation failed:', data.error);
+            }
+          } else {
+            console.warn(`Apps Script report HTTP error: ${response.status}`);
+          }
+        } catch (scriptErr) {
+          console.error('Failed calling Apps Script to create report:', scriptErr);
+        }
+      }
+    }
 
     if (existing) {
       await db.update(surveys)
@@ -151,6 +259,8 @@ export async function POST(request: Request) {
           salesPersonId: spId,
           existingImages: existingImagesString,
           roomsData: roomsDataString,
+          docUrl: docUrl,
+          pdfUrl: pdfUrl,
           updatedAt: now,
           status: targetStatus,
         })
@@ -163,88 +273,20 @@ export async function POST(request: Request) {
           salesPersonId: spId,
           existingImages: existingImagesString,
           roomsData: roomsDataString,
+          docUrl: docUrl,
+          pdfUrl: pdfUrl,
           createdAt: now,
           updatedAt: now,
           status: targetStatus,
         });
     }
 
-    // Trigger Apps Script and PDF creation asynchronously ONLY if explicitly requested
-    if (shouldGenerateReport) {
-      after(async () => {
-        let docUrl: string | null = null;
-        let pdfUrl: string | null = null;
-
-        const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
-        if (scriptUrl) {
-          try {
-            console.log('Background: Requesting Google Apps Script Web App to create report...');
-            const response = await fetch(scriptUrl, {
-              method: 'POST',
-              redirect: 'follow',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                action: 'createReport',
-                oldDocUrl: existing?.docUrl || null,
-                oldPdfUrl: existing?.pdfUrl || null,
-                projectName: surveyData.projectName || body.projectName,
-                customerName: surveyData.customerName || body.customerName,
-                budget: surveyData.budget || body.budget,
-                salesPersonName: salesPersonName || body.salesPersonName,
-                surveyDate: surveyData.surveyDate || body.surveyDate,
-                requestDate: surveyData.requestDate || body.requestDate,
-                quotationDeadline: surveyData.quotationDeadline || body.quotationDeadline,
-                contactName: surveyData.contactName || body.contactName,
-                contactPhone: surveyData.contactPhone || body.contactPhone,
-                locationAddress: surveyData.locationAddress || body.locationAddress,
-                locationLat: surveyData.locationLat || body.locationLat,
-                locationLng: surveyData.locationLng || body.locationLng,
-                roomsData: rooms,
-                existingImages: existingImagesList,
-                id: id
-              })
-            });
-            
-            if (response.ok) {
-              const data = await response.json();
-              if (data.success) {
-                docUrl = data.docUrl || null;
-                pdfUrl = data.pdfUrl || null;
-                console.log('Background: Apps Script report generated successfully:', { docUrl, pdfUrl });
-              } else {
-                console.warn('Background: Apps Script report generation failed:', data.error);
-              }
-            } else {
-              console.warn(`Background: Apps Script report HTTP error: ${response.status}`);
-            }
-          } catch (scriptErr) {
-            console.error('Background: Failed calling Apps Script to create report:', scriptErr);
-          }
-        }
-
-        // Only save authentic URLs returned from Google Apps Script (never fake mock links)
-        const finalDocUrl = docUrl || existing?.docUrl || null;
-        const finalPdfUrl = pdfUrl || existing?.pdfUrl || null;
-        const finalStatus = docUrl || pdfUrl ? 'completed' : (existing?.docUrl ? 'completed' : 'synced');
-
-        // Update survey with real URLs and completed status
-        await db.update(surveys)
-          .set({
-            docUrl: finalDocUrl,
-            pdfUrl: finalPdfUrl,
-            status: finalStatus,
-            updatedAt: new Date().toISOString(),
-          })
-          .where(eq(surveys.id, id));
-          
-        console.log(`Background: Survey status updated to ${finalStatus} with docUrl: ${finalDocUrl}, pdfUrl: ${finalPdfUrl}`);
-      });
-    }
-
     return NextResponse.json({
       success: true,
       surveyId: id,
-      status: 'generating'
+      status: targetStatus,
+      docUrl: docUrl,
+      pdfUrl: pdfUrl
     });
   } catch (error: any) {
     console.error('Error saving survey:', error);
