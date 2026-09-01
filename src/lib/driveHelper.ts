@@ -32,7 +32,9 @@ function getGoogleAuthClient() {
 export async function uploadFileToDrive(
   base64Str: string,
   surveyId: string,
-  fileNamePrefix: string
+  fileNamePrefix: string,
+  projectName?: string,
+  customerName?: string
 ): Promise<string> {
   const auth = getGoogleAuthClient();
 
@@ -60,7 +62,9 @@ export async function uploadFileToDrive(
         body: JSON.stringify({
           action: 'uploadImage',
           imageBase64: base64Str,
-          fileName: fileName
+          fileName: fileName,
+          projectName: projectName || '',
+          customerName: customerName || ''
         })
       });
       if (response.ok) {

@@ -6,7 +6,9 @@ import { offlineDb } from './offlineDb';
 async function uploadSingleBase64Image(
   base64Str: string,
   surveyId: string,
-  fileNamePrefix: string
+  fileNamePrefix: string,
+  projectName?: string,
+  customerName?: string
 ): Promise<string> {
   const response = await fetch('/api/surveys/upload', {
     method: 'POST',
@@ -17,6 +19,8 @@ async function uploadSingleBase64Image(
       base64Str,
       surveyId,
       fileNamePrefix,
+      projectName,
+      customerName,
     }),
   });
 
@@ -90,6 +94,8 @@ function compressImage(base64Str: string, maxWidth = 1200, maxHeight = 900, qual
 export async function uploadSurveyBase64Images(survey: any): Promise<any> {
   const updatedSurvey = JSON.parse(JSON.stringify(survey)); // deep copy
   const id = updatedSurvey.id;
+  const projectName = updatedSurvey.projectName || '';
+  const customerName = updatedSurvey.customerName || '';
 
   const compress = async (base64: string): Promise<string> => {
     try {
@@ -105,11 +111,11 @@ export async function uploadSurveyBase64Images(survey: any): Promise<any> {
     for (const img of updatedSurvey.existingImages) {
       if (img.originalImage && img.originalImage.startsWith('data:image')) {
         const compressed = await compress(img.originalImage);
-        img.originalImage = await uploadSingleBase64Image(compressed, id, `existing_step${img.step}_orig`);
+        img.originalImage = await uploadSingleBase64Image(compressed, id, `existing_step${img.step}_orig`, projectName, customerName);
       }
       if (img.annotatedImage && img.annotatedImage.startsWith('data:image')) {
         const compressed = await compress(img.annotatedImage);
-        img.annotatedImage = await uploadSingleBase64Image(compressed, id, `existing_step${img.step}_anno`);
+        img.annotatedImage = await uploadSingleBase64Image(compressed, id, `existing_step${img.step}_anno`, projectName, customerName);
       }
     }
   }
@@ -121,11 +127,11 @@ export async function uploadSurveyBase64Images(survey: any): Promise<any> {
         for (const img of room.images) {
           if (img.originalImage && img.originalImage.startsWith('data:image')) {
             const compressed = await compress(img.originalImage);
-            img.originalImage = await uploadSingleBase64Image(compressed, id, `room_${room.id}_step${img.step}_orig`);
+            img.originalImage = await uploadSingleBase64Image(compressed, id, `room_${room.id}_step${img.step}_orig`, projectName, customerName);
           }
           if (img.annotatedImage && img.annotatedImage.startsWith('data:image')) {
             const compressed = await compress(img.annotatedImage);
-            img.annotatedImage = await uploadSingleBase64Image(compressed, id, `room_${room.id}_step${img.step}_anno`);
+            img.annotatedImage = await uploadSingleBase64Image(compressed, id, `room_${room.id}_step${img.step}_anno`, projectName, customerName);
           }
         }
       }

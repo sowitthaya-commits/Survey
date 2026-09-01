@@ -26,23 +26,42 @@ function doPost(e) {
 
     // ACTION: UPLOAD IMAGE
     if (action === 'uploadImage') {
-      const folder = DriveApp.getFolderById(IMAGE_FOLDER_ID);
+      const rootFolder = DriveApp.getFolderById(IMAGE_FOLDER_ID);
       const base64Data = postData.imageBase64;
       const fileName = postData.fileName || ('sws_image_' + new Date().getTime() + '.jpg');
+      const projectName = postData.projectName || postData.folderName || '';
+      const customerName = postData.customerName || '';
+
+      // จัดการสร้าง/ค้นหาโฟลเดอร์แยกตามรายโครงการ
+      let targetFolderName = 'รูปภาพสำรวจทั่วไป';
+      if (projectName) {
+        targetFolderName = projectName + (customerName ? ' (' + customerName + ')' : '');
+      }
+
+      let targetFolder;
+      const subFolders = rootFolder.getFoldersByName(targetFolderName);
+      if (subFolders.hasNext()) {
+        targetFolder = subFolders.next();
+      } else {
+        targetFolder = rootFolder.createFolder(targetFolderName);
+        targetFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      }
       
       const cleanBase64 = base64Data.replace(/^data:image\/[a-z-]+\/?[a-z-]+;base64,/, '');
       const decoded = Utilities.base64Decode(cleanBase64);
       const mimeType = base64Data.includes('image/png') ? 'image/png' : 'image/jpeg';
       const blob = Utilities.newBlob(decoded, mimeType, fileName);
       
-      const file = folder.createFile(blob);
+      const file = targetFolder.createFile(blob);
       
       // ตั้งค่าแชร์ให้ทุกคนเข้าดูได้ทางเว็บ
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       
       return ContentService.createTextOutput(JSON.stringify({
         success: true,
-        url: 'https://docs.google.com/uc?export=view&id=' + file.getId()
+        url: 'https://docs.google.com/uc?export=view&id=' + file.getId(),
+        folderUrl: targetFolder.getUrl(),
+        folderId: targetFolder.getId()
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -411,6 +430,24 @@ function doPost(e) {
         
         docUrl = newDocFile.getUrl();
         pdfUrl = newPdfFile.getUrl();
+
+        // ค้นหาหรือสร้างโฟลเดอร์รูปภาพของโครงการเพื่อส่งกลับไปให้ระบบนำไปเปิดดูใน Gallery
+        let imagesFolderUrl = '';
+        try {
+          const rootImgFolder = DriveApp.getFolderById(IMAGE_FOLDER_ID);
+          const projectFolderName = projectName + (customerName ? ' (' + customerName + ')' : '');
+          const imgSubFolders = rootImgFolder.getFoldersByName(projectFolderName);
+          if (imgSubFolders.hasNext()) {
+            imagesFolderUrl = imgSubFolders.next().getUrl();
+          } else {
+            const newFolder = rootImgFolder.createFolder(projectFolderName);
+            newFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+            imagesFolderUrl = newFolder.getUrl();
+          }
+        } catch (fErr) {
+          console.warn("Could not get/create project image folder: " + fErr.toString());
+        }
+
       } catch (docErr) {
         console.error("Error generating spreadsheet report: " + docErr.toString() + "\n" + docErr.stack);
         throw new Error("ล้มเหลวในการเขียนข้อมูลลง Google Sheets Template: " + docErr.toString());
@@ -419,7 +456,8 @@ function doPost(e) {
       return ContentService.createTextOutput(JSON.stringify({
         success: true,
         docUrl: docUrl,
-        pdfUrl: pdfUrl
+        pdfUrl: pdfUrl,
+        folderUrl: imagesFolderUrl
       })).setMimeType(ContentService.MimeType.JSON);
     }
 

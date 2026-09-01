@@ -192,8 +192,13 @@ export default function GalleryModal({ survey, isOpen, onClose, onSurveyUpdated 
     setLightboxIndex((lightboxIndex - 1 + filteredImages.length) % filteredImages.length);
   };
 
-  // Google Drive folder URL (Default SWS survey images folder)
-  const googleDriveFolderUrl = 'https://drive.google.com/drive/folders/133P6jxYlZ0ixXPhuYwFQ8tjbNCATEnFT';
+  // Google Drive folder URL for this specific project
+  const googleDriveFolderUrl = React.useMemo(() => {
+    if (survey?.folderUrl) return survey.folderUrl;
+    if (survey?.imagesFolderUrl) return survey.imagesFolderUrl;
+    // Direct link to SWS Survey Images root folder
+    return 'https://drive.google.com/drive/folders/133P6jxYlZ0ixXPhuYwFQ8tjbNCATEnFT';
+  }, [survey]);
 
   // Handle upload additional photos
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

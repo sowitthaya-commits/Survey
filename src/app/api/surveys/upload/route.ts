@@ -3,13 +3,13 @@ import { uploadFileToDrive } from '@/lib/driveHelper';
 
 export async function POST(request: Request) {
   try {
-    const { base64Str, surveyId, fileNamePrefix } = await request.json();
+    const { base64Str, surveyId, fileNamePrefix, projectName, customerName } = await request.json();
 
     if (!base64Str || !surveyId || !fileNamePrefix) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
     }
 
-    const driveUrl = await uploadFileToDrive(base64Str, surveyId, fileNamePrefix);
+    const driveUrl = await uploadFileToDrive(base64Str, surveyId, fileNamePrefix, projectName, customerName);
     
     return NextResponse.json({ success: true, url: driveUrl });
   } catch (error: any) {
