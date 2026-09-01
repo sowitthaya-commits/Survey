@@ -461,9 +461,9 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
   };
 
   return (
-    <div className="flex flex-col border border-slate-200 bg-white rounded-xl overflow-hidden shadow-md max-w-full">
+    <div className="flex flex-col h-full w-full bg-white overflow-hidden select-none">
       {/* Toolbar */}
-      <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex flex-wrap gap-3 items-center justify-between">
+      <div className="shrink-0 bg-slate-50 border-b border-slate-200 px-3 py-2 md:px-4 md:py-2.5 flex flex-wrap gap-2 md:gap-3 items-center justify-between z-10">
         <div className="flex gap-1 bg-slate-200/50 p-1 rounded-lg">
           <button
             type="button"
@@ -515,6 +515,7 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
             className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1 transition-all ${
               tool === 'text' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-655 hover:text-slate-900'
             }`}
+            title="พิมพ์ข้อความ"
           >
             <Type className="w-3.5 h-3.5" />
             ข้อความ
@@ -576,7 +577,7 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
         </div>
 
         {/* Customization controls */}
-        <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-3 md:gap-4 flex-wrap">
           <div className="flex items-center gap-1">
             {['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#a855f7'].map((c) => (
               <button
@@ -591,13 +592,13 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
             ))}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 md:gap-2">
             <span className="text-xs text-slate-500 font-medium">ขนาด:</span>
             {tool === 'text' ? (
               <select
                 value={textSize}
                 onChange={(e) => setTextSize(Number(e.target.value))}
-                className="text-xs border border-slate-200 rounded px-1.5 py-1 focus:outline-none"
+                className="text-xs border border-slate-200 rounded px-1.5 py-1 focus:outline-none bg-white"
               >
                 <option value={12}>เล็ก (12px)</option>
                 <option value={16}>ปกติ (16px)</option>
@@ -608,7 +609,7 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
               <select
                 value={lineWidth}
                 onChange={(e) => setLineWidth(Number(e.target.value))}
-                className="text-xs border border-slate-200 rounded px-1.5 py-1 focus:outline-none"
+                className="text-xs border border-slate-200 rounded px-1.5 py-1 focus:outline-none bg-white"
               >
                 <option value={2}>บาง (2px)</option>
                 <option value={3}>ปกติ (3px)</option>
@@ -625,7 +626,7 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
             onClick={handleUndo}
             disabled={shapes.length === 0}
             className="p-1.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent transition"
-            title="ย้อนกลับ"
+            title="ย้อนกลับ (Undo)"
           >
             <Undo className="w-4 h-4" />
           </button>
@@ -634,18 +635,17 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
             onClick={handleClear}
             disabled={shapes.length === 0}
             className="p-1.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-650 disabled:opacity-40 disabled:hover:bg-transparent transition"
-            title="ล้างทั้งหมด"
+            title="ล้างทั้งหมด (Clear)"
           >
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Canvas container */}
+      {/* Canvas workspace - expands to fill remaining height perfectly */}
       <div 
         ref={containerRef} 
-        className="w-full bg-slate-900 flex items-center justify-center relative overflow-hidden"
-        style={{ minHeight: '300px' }}
+        className="flex-1 min-h-0 w-full bg-slate-950 flex items-center justify-center relative overflow-hidden p-2"
       >
         <canvas
           ref={canvasRef}
@@ -656,11 +656,12 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
           onTouchStart={handleStart}
           onTouchMove={handleMove}
           onTouchEnd={handleEnd}
-          className={`block max-w-full touch-none ${
+          className={`block touch-none max-h-full max-w-full w-auto h-auto object-contain shadow-2xl rounded-sm ${
             tool === 'pan' ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-crosshair'
           }`}
           style={{
-            maxHeight: '70vh',
+            maxHeight: '100%',
+            maxWidth: '100%',
             objectFit: 'contain',
             backgroundColor: '#020617'
           }}
@@ -673,13 +674,13 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
         )}
       </div>
 
-      {/* Actions */}
-      <div className="bg-slate-50 border-t border-slate-200 px-4 py-3.5 flex justify-end gap-2.5">
+      {/* Footer Actions */}
+      <div className="shrink-0 bg-slate-50 border-t border-slate-200 px-4 py-3 flex justify-end gap-2.5 z-10">
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 border border-slate-200 text-sm font-semibold rounded-lg text-slate-700 hover:bg-slate-100 transition"
+            className="px-4 py-2 border border-slate-200 text-sm font-semibold rounded-lg text-slate-700 hover:bg-slate-100 transition active:scale-95"
           >
             ยกเลิก
           </button>
@@ -688,7 +689,7 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
           type="button"
           onClick={handleFinish}
           disabled={!imgElement}
-          className="px-5 py-2 btn btn-primary disabled:bg-slate-400 text-sm font-semibold text-white rounded-lg flex items-center gap-1.5 transition shadow-sm"
+          className="px-5 py-2 btn btn-primary disabled:bg-slate-400 text-sm font-semibold text-white rounded-lg flex items-center gap-1.5 transition shadow-sm active:scale-95"
         >
           <Check className="w-4 h-4" />
           บันทึกรูปภาพ

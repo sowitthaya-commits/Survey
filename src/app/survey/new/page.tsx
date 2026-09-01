@@ -2322,21 +2322,22 @@ function SurveyWizardForm() {
 
       {/* Fullscreen Modal overlay for Image Annotation */}
       {annotatingRoomIndex !== null && annotatingImageId !== null && annotatingImageSrc && (
-        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-4xl max-h-[90vh] flex flex-col bg-white rounded-2xl shadow-2xl overflow-hidden">
-            <div className="bg-slate-100 px-6 py-4 flex items-center justify-between border-b border-slate-200">
-              <h3 className="font-bold text-slate-900">
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-3 md:p-6">
+          <div className="w-full max-w-5xl h-[92vh] flex flex-col bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="shrink-0 bg-slate-100 px-5 py-3 flex items-center justify-between border-b border-slate-200">
+              <h3 className="font-bold text-slate-900 text-sm md:text-base">
                 วาดเขียนบอกระยะลงบนรูปภาพ ({annotatingRoomIndex === -1 ? 'อาคาร / หน้าห้อง' : rooms[annotatingRoomIndex].name})
               </h3>
               <button 
                 type="button"
                 onClick={() => { setAnnotatingRoomIndex(null); setAnnotatingImageId(null); setAnnotatingImageSrc(null); }}
-                className="text-slate-505 hover:text-slate-800 text-sm font-semibold p-1 hover:bg-slate-200 rounded"
+                className="text-slate-500 hover:text-slate-800 text-sm font-semibold p-1 hover:bg-slate-200 rounded-lg transition"
+                title="ปิดหน้าต่าง"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-4 flex-1 overflow-y-auto bg-slate-55 flex items-center justify-center">
+            <div className="flex-1 min-h-0 w-full overflow-hidden flex flex-col">
               <ImageAnnotation 
                 imageSrc={annotatingImageSrc}
                 onSave={saveAnnotationResult}
