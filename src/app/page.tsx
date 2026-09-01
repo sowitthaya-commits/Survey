@@ -701,38 +701,10 @@ export default function Dashboard() {
         );
       case 'generating':
         return (
-          <button
-            type="button"
-            onClick={async (e) => {
-              e.stopPropagation();
-              try {
-                const res = await fetch('/api/surveys', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    action: 'syncDrive',
-                    id: survey.id,
-                    projectName: survey.projectName,
-                    customerName: survey.customerName
-                  })
-                });
-                const data = await res.json();
-                if (data.success && data.found) {
-                  showPopup('success', 'เชื่อมต่อไฟล์สำเร็จ', 'พบไฟล์เอกสารบน Google Drive และทำการเชื่อมต่อลิงก์เรียบร้อยแล้ว!');
-                  loadAllSurveys(true);
-                } else {
-                  showPopup('info', 'กำลังประมวลผล', 'ระบบกำลังสร้างไฟล์บน Google Drive กรุณารอสักครู่...');
-                }
-              } catch (err) {
-                console.error(err);
-              }
-            }}
-            className="inline-flex items-center gap-1 bg-[#4f46e5]/10 hover:bg-[#4f46e5]/20 text-[#4338ca] text-[11px] font-bold px-2 py-0.5 rounded-full border border-[#4f46e5]/20 transition cursor-pointer"
-            title="คลิกเพื่อตรวจสอบ/ดึงลิงก์จาก Google Drive ทันที"
-          >
-            <Loader2 className="w-3 h-3 animate-spin" />
-            กำลังสร้าง (คลิกเพื่อดึงลิงก์)
-          </button>
+          <span className="inline-flex items-center gap-1.5 bg-[#4f46e5]/10 text-[#4338ca] text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-[#4f46e5]/20">
+            <Loader2 className="w-3 h-3 animate-spin text-[#4f46e5]" />
+            กำลังสร้าง Docs/PDF...
+          </span>
         );
       case 'pending_sync':
         return (

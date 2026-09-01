@@ -193,31 +193,68 @@ function doPost(e) {
           const sheets = ss.getSheets();
           console.log('Successfully opened spreadsheet. Total sheet tabs: ' + sheets.length);
           
-          // --- 1. Replace Project Info on ALL Sheets ---
+          // --- 1. Project Info Mapping ---
           const budgetVal = postData.budget || '';
           const cleanBudget = String(budgetVal).replace(/[^0-9.]/g, '');
           const parsedBudget = cleanBudget ? Number(cleanBudget) : NaN;
           const budgetText = !isNaN(parsedBudget) ? parsedBudget.toLocaleString() + ' บาท' : (budgetVal || '-');
-          console.log('Project Info to replace: ' + JSON.stringify({ projectName, customerName, budgetText }));
 
-          for (const sheet of sheets) {
-            const sheetName = sheet.getName();
-            const r1 = sheet.createTextFinder('{{PROJECT_NAME}}').replaceAllWith(projectName);
-            const r2 = sheet.createTextFinder('{{CUSTOMER_NAME}}').replaceAllWith(customerName);
-            const r3 = sheet.createTextFinder('{{BUDGET}}').replaceAllWith(budgetText);
-            const r4 = sheet.createTextFinder('{{SALES_PERSON}}').replaceAllWith(postData.salesPersonName || '-');
-            const r5 = sheet.createTextFinder('{{SURVEY_DATE}}').replaceAllWith(postData.surveyDate || '-');
-            const r6 = sheet.createTextFinder('{{REQUEST_DATE}}').replaceAllWith(postData.requestDate || '-');
-            const r7 = sheet.createTextFinder('{{QUOTATION_DEADLINE}}').replaceAllWith(postData.quotationDeadline || '-');
-            const r8 = sheet.createTextFinder('{{CONTACT_NAME}}').replaceAllWith(postData.contactName || '-');
-            const r9 = sheet.createTextFinder('{{CONTACT_PHONE}}').replaceAllWith(postData.contactPhone || '-');
-            const r10 = sheet.createTextFinder('{{LOCATION_ADDRESS}}').replaceAllWith(postData.locationAddress || '-');
-            const r11 = sheet.createTextFinder('{{LOCATION_LAT}}').replaceAllWith(postData.locationLat ? String(postData.locationLat) : '-');
-            const r12 = sheet.createTextFinder('{{LOCATION_LNG}}').replaceAllWith(postData.locationLng ? String(postData.locationLng) : '-');
-            console.log('Sheet "' + sheetName + '" replacements count: PROJECT_NAME=' + r1 + ', CUSTOMER_NAME=' + r2 + ', BUDGET=' + r3);
-          }
+          const projectMap = {
+            '{{PROJECT_NAME}}': projectName,
+            '{{CUSTOMER_NAME}}': customerName,
+            '{{BUDGET}}': budgetText,
+            '{{SALES_PERSON}}': postData.salesPersonName || '-',
+            '{{SURVEY_DATE}}': postData.surveyDate || '-',
+            '{{REQUEST_DATE}}': postData.requestDate || '-',
+            '{{QUOTATION_DEADLINE}}': postData.quotationDeadline || '-',
+            '{{CONTACT_NAME}}': postData.contactName || '-',
+            '{{CONTACT_PHONE}}': postData.contactPhone || '-',
+            '{{LOCATION_ADDRESS}}': postData.locationAddress || '-',
+            '{{LOCATION_LAT}}': postData.locationLat ? String(postData.locationLat) : '-',
+            '{{LOCATION_LNG}}': postData.locationLng ? String(postData.locationLng) : '-'
+          };
+
+          const rooms = postData.roomsData || [];
           
-          // --- 1.1 Replace Building / Site Frontage Images (Step 1 Photos) across sheets ---
+          // --- 2. Fast In-Memory Sheet Replacer (10x Speedup) ---
+          const replaceAllInSheetFast = (sheet, room) => {
+            const lastRow = sheet.getLastRow();
+            const lastCol = sheet.getLastColumn();
+            if (lastRow === 0 || lastCol === 0) return;
+
+            const range = sheet.getRange(1, 1, lastRow, lastCol);
+            const values = range.getValues();
+            let changed = false;
+
+            for (let r = 0; r < lastRow; r++) {
+              for (let c = 0; c < lastCol; c++) {
+                let cellVal = values[r][c];
+                if (typeof cellVal === 'string' && cellVal.indexOf('{{') !== -1) {
+                  let text = cellVal;
+                  // Replace project info
+                  for (const tag in projectMap) {
+                    if (text.indexOf(tag) !== -1) {
+                      text = text.split(tag).join(projectMap[tag]);
+                    }
+                  }
+                  // Replace room info if room provided
+                  if (room) {
+                    text = replaceRoomPlaceholders(text, room);
+                  }
+                  if (text !== cellVal) {
+                    values[r][c] = text;
+                    changed = true;
+                  }
+                }
+              }
+            }
+
+            if (changed) {
+              range.setValues(values);
+            }
+          };
+
+          // Step 1: Building image placeholders
           const existingImages = postData.existingImages || [];
           const bUrl1 = existingImages[0] ? (existingImages[0].annotatedImage || existingImages[0].originalImage) : '';
           const bUrl2 = existingImages[1] ? (existingImages[1].annotatedImage || existingImages[1].originalImage) : '';
@@ -232,123 +269,26 @@ function doPost(e) {
           ];
 
           for (const sheet of sheets) {
+            replaceAllInSheetFast(sheet, null);
+
             for (const item of buildingImageMap) {
               for (const tag of item.tags) {
                 const range = sheet.createTextFinder(tag).findNext();
                 if (range) {
-                  if (item.url) {
-                    const cellImg = SpreadsheetApp.newCellImage().setSourceUrl(item.url).build();
-                    range.setValue(cellImg);
-                  } else {
-                    range.setValue('');
-                  }
+                  range.setValue(item.url ? SpreadsheetApp.newCellImage().setSourceUrl(item.url).build() : '');
                 }
               }
             }
 
-            // ถ้าเป็นชีทขั้นตอนที่ 1 หรือชีทข้อมูลทั่วไปที่มี {{IMAGE_1}} หรือ {{IMAGE_2}}
             const isStep1Sheet = sheet.getName().indexOf('1') === 0 || sheet.getName().includes('ทั่วไป') || sheet.getName().includes('อาคาร');
             if (isStep1Sheet) {
               const rImg1 = sheet.createTextFinder('{{IMAGE_1}}').findNext();
-              if (rImg1) {
-                if (bUrl1) {
-                  const cellImg1 = SpreadsheetApp.newCellImage().setSourceUrl(bUrl1).build();
-                  rImg1.setValue(cellImg1);
-                } else {
-                  rImg1.setValue('');
-                }
-              }
-
+              if (rImg1) rImg1.setValue(bUrl1 ? SpreadsheetApp.newCellImage().setSourceUrl(bUrl1).build() : '');
               const rImg2 = sheet.createTextFinder('{{IMAGE_2}}').findNext();
-              if (rImg2) {
-                if (bUrl2) {
-                  const cellImg2 = SpreadsheetApp.newCellImage().setSourceUrl(bUrl2).build();
-                  rImg2.setValue(cellImg2);
-                } else {
-                  rImg2.setValue('');
-                }
-              }
+              if (rImg2) rImg2.setValue(bUrl2 ? SpreadsheetApp.newCellImage().setSourceUrl(bUrl2).build() : '');
             }
           }
-          
-          const rooms = postData.roomsData || [];
-          
-          // --- 2. Unified Room Placeholders Replacer ---
-          const replaceRoomPlaceholders = (text, room) => {
-            if (typeof text !== 'string') return text;
-            
-            return text
-              // Step 2: Room structure
-              .replace(/\{\{ROOM_NAME\}\}/g, room.name || '')
-              .replace(/\{\{ROOM_FLOOR\}\}/g, room.floor || '')
-              .replace(/\{\{ROOM_WIDTH\}\}/g, room.roomWidth ? String(room.roomWidth) : '-')
-              .replace(/\{\{ROOM_LENGTH\}\}/g, room.roomLength ? String(room.roomLength) : '-')
-              .replace(/\{\{ROOM_HEIGHT\}\}/g, room.roomHeight ? String(room.roomHeight) : '-')
-              .replace(/\{\{INSTALLATION_TYPE\}\}/g, room.installationType || '-')
-              .replace(/\{\{SURFACE_TYPE\}\}/g, room.surfaceType || '-')
-              .replace(/\{\{STRUCTURE_RESP\}\}/g, room.structureResponsibility || '-')
-              .replace(/\{\{CABLING_RESP\}\}/g, room.cablingResponsibility || '-')
-              .replace(/\{\{POWER_RESP\}\}/g, room.mainPowerResponsibility || '-')
-              .replace(/\{\{DISTANCE_CONTROL\}\}/g, room.distanceToControlRoom ? String(room.distanceToControlRoom) : '-')
-              .replace(/\{\{RACK_LOCATION\}\}/g, room.rackLocation || '-')
-              .replace(/\{\{RACK_RESP\}\}/g, room.rackResponsibility || '-')
-              .replace(/\{\{RACK_POWER_RESP\}\}/g, room.rackPowerSource || '-')
-              .replace(/\{\{WALL_PLATE_WIRING\}\}/g, room.wallPlateWiring || '-')
-              .replace(/\{\{WALL_PLATE_TYPE\}\}/g, room.wallPlateType || '-')
-              .replace(/\{\{WALL_PLATE_LOC\}\}/g, room.wallPlateLocation || '-')
-              // Step 3: Visual / Display
-              .replace(/\{\{LED_WIDTH\}\}/g, room.ledWidth ? String(room.ledWidth) : '-')
-              .replace(/\{\{LED_HEIGHT\}\}/g, room.ledHeight ? String(room.ledHeight) : '-')
-              .replace(/\{\{LED_PITCH\}\}/g, room.ledPixelPitch || '-')
-              .replace(/\{\{LED_TYPE\}\}/g, room.ledType || '-')
-              .replace(/\{\{LED_SUBSTRATE\}\}/g, room.ledSubstrate || '-')
-              .replace(/\{\{LED_APPLICATION\}\}/g, room.ledApplication || '-')
-              .replace(/\{\{INTERACTIVE_QTY\}\}/g, room.interactiveQty ? String(room.interactiveQty) : '-')
-              .replace(/\{\{INTERACTIVE_SIZE\}\}/g, room.interactiveSize ? String(room.interactiveSize) : '-')
-              .replace(/\{\{INTERACTIVE_BRAND\}\}/g, room.interactiveBrand || '-')
-              .replace(/\{\{PROJECTOR_QTY\}\}/g, room.projectorQty ? String(room.projectorQty) : '-')
-              .replace(/\{\{PROJECTOR_LUMEN\}\}/g, room.projectorLumen ? String(room.projectorLumen) : '-')
-              .replace(/\{\{PROJECTOR_BRAND\}\}/g, room.projectorBrand || '-')
-              .replace(/\{\{SIDE_DISPLAY_TYPE\}\}/g, room.sideDisplayType || '-')
-              .replace(/\{\{SIDE_DISPLAY_QTY\}\}/g, room.sideDisplayQty ? String(room.sideDisplayQty) : '-')
-              .replace(/\{\{SIDE_DISPLAY_IMAGE\}\}/g, room.sideDisplayDiffImage || '-')
-              .replace(/\{\{PTZ_QTY\}\}/g, room.ptzQty ? String(room.ptzQty) : '-')
-              .replace(/\{\{PTZ_TRACKING\}\}/g, room.ptzTracking || '-')
-              .replace(/\{\{PTZ_BRAND\}\}/g, room.ptzBrand || '-')
-              .replace(/\{\{SIGNAGE_QTY\}\}/g, room.signageQty ? String(room.signageQty) : '-')
-              .replace(/\{\{SIGNAGE_SIZE\}\}/g, room.signageSize ? String(room.signageSize) : '-')
-              .replace(/\{\{SIGNAGE_BRAND\}\}/g, room.signageBrand || '-')
-              .replace(/\{\{VISUAL_NOTE\}\}/g, room.visualNote || '-')
-              // Step 4: Audio
-              .replace(/\{\{MIC_WIRED_QTY\}\}/g, room.micWiredQty ? String(room.micWiredQty) : '-')
-              .replace(/\{\{MIC_WIRED_BRAND\}\}/g, room.micWiredBrand || '-')
-              .replace(/\{\{MIC_HAND_QTY\}\}/g, room.micWirelessHandQty ? String(room.micWirelessHandQty) : '-')
-              .replace(/\{\{MIC_HAND_BRAND\}\}/g, room.micWirelessHandBrand || '-')
-              .replace(/\{\{MIC_LAPEL_QTY\}\}/g, room.micWirelessLapelQty ? String(room.micWirelessLapelQty) : '-')
-              .replace(/\{\{MIC_LAPEL_BRAND\}\}/g, room.micWirelessLapelBrand || '-')
-              .replace(/\{\{SPEAKER_TYPE\}\}/g, room.speakerType || '-')
-              .replace(/\{\{SPEAKER_BRAND\}\}/g, room.speakerBrand || '-')
-              .replace(/\{\{AIO_QTY\}\}/g, room.allInOneQty ? String(room.allInOneQty) : '-')
-              .replace(/\{\{AIO_WIRELESS_TYPE\}\}/g, room.allInOneWirelessType || '-')
-              .replace(/\{\{AIO_BRAND\}\}/g, room.allInOneBrand || '-')
-              .replace(/\{\{VDO_PLATFORM\}\}/g, room.vdoConferencePlatform || '-')
-              .replace(/\{\{TABLETOP_CHAIRMAN\}\}/g, room.tabletopChairmanQty ? String(room.tabletopChairmanQty) : '-')
-              .replace(/\{\{TABLETOP_DELEGATE\}\}/g, room.tabletopDelegateQty ? String(room.tabletopDelegateQty) : '-')
-              .replace(/\{\{TABLETOP_TYPE\}\}/g, room.tabletopType || '-')
-              .replace(/\{\{TABLETOP_BRAND\}\}/g, room.tabletopBrand || '-')
-              .replace(/\{\{TABLETOP_SPECIAL\}\}/g, room.tabletopSpecialFeatures || '-')
-              .replace(/\{\{AUDIO_NOTE\}\}/g, room.audioNote || '-')
-              // Step 5: Control & Network
-              .replace(/\{\{CONTROL_TYPE\}\}/g, room.controlType || '-')
-              .replace(/\{\{CONTROL_INTERFACE\}\}/g, room.controlInterface || '-')
-              .replace(/\{\{CONTROL_IPAD\}\}/g, room.controlIpadStatus || '-')
-              .replace(/\{\{CONTROL_NOTE\}\}/g, room.controlNote || '-')
-              .replace(/\{\{NETWORK_INTERFACE\}\}/g, room.networkInterface || '-')
-              .replace(/\{\{NETWORK_IP\}\}/g, room.networkIPRequirement || '-')
-              .replace(/\{\{NETWORK_RESP\}\}/g, room.networkResponsibility || '-')
-              .replace(/\{\{NETWORK_NOTE\}\}/g, room.networkNote || '-');
-          };
-          
+
           // --- 3. Process Dynamic Room Rows or Tab Duplication in ALL Sheets ---
           const ROOM_PLACEHOLDERS = [
             '{{ROOM_FLOOR}}', '{{ROOM_WIDTH}}', '{{ROOM_LENGTH}}', '{{ROOM_HEIGHT}}',
@@ -373,77 +313,6 @@ function doPost(e) {
             '{{CONTROL_NOTE}}', '{{NETWORK_INTERFACE}}', '{{NETWORK_IP}}',
             '{{NETWORK_RESP}}', '{{NETWORK_NOTE}}'
           ];
-
-          const replacePlaceholdersInSheet = (clonedSheet, room) => {
-            clonedSheet.createTextFinder('{{ROOM_NAME}}').replaceAllWith(room.name || '');
-            clonedSheet.createTextFinder('{{ROOM_FLOOR}}').replaceAllWith(room.floor || '');
-            clonedSheet.createTextFinder('{{ROOM_WIDTH}}').replaceAllWith(room.roomWidth ? String(room.roomWidth) : '-');
-            clonedSheet.createTextFinder('{{ROOM_LENGTH}}').replaceAllWith(room.roomLength ? String(room.roomLength) : '-');
-            clonedSheet.createTextFinder('{{ROOM_HEIGHT}}').replaceAllWith(room.roomHeight ? String(room.roomHeight) : '-');
-            clonedSheet.createTextFinder('{{INSTALLATION_TYPE}}').replaceAllWith(room.installationType || '-');
-            clonedSheet.createTextFinder('{{SURFACE_TYPE}}').replaceAllWith(room.surfaceType || '-');
-            clonedSheet.createTextFinder('{{STRUCTURE_RESP}}').replaceAllWith(room.structureResponsibility || '-');
-            clonedSheet.createTextFinder('{{CABLING_RESP}}').replaceAllWith(room.cablingResponsibility || '-');
-            clonedSheet.createTextFinder('{{POWER_RESP}}').replaceAllWith(room.mainPowerResponsibility || '-');
-            clonedSheet.createTextFinder('{{DISTANCE_CONTROL}}').replaceAllWith(room.distanceToControlRoom ? String(room.distanceToControlRoom) : '-');
-            clonedSheet.createTextFinder('{{RACK_LOCATION}}').replaceAllWith(room.rackLocation || '-');
-            clonedSheet.createTextFinder('{{RACK_RESP}}').replaceAllWith(room.rackResponsibility || '-');
-            clonedSheet.createTextFinder('{{RACK_POWER_RESP}}').replaceAllWith(room.rackPowerSource || '-');
-            clonedSheet.createTextFinder('{{WALL_PLATE_WIRING}}').replaceAllWith(room.wallPlateWiring || '-');
-            clonedSheet.createTextFinder('{{WALL_PLATE_TYPE}}').replaceAllWith(room.wallPlateType || '-');
-            clonedSheet.createTextFinder('{{WALL_PLATE_LOC}}').replaceAllWith(room.wallPlateLocation || '-');
-            
-            clonedSheet.createTextFinder('{{LED_WIDTH}}').replaceAllWith(room.ledWidth ? String(room.ledWidth) : '-');
-            clonedSheet.createTextFinder('{{LED_HEIGHT}}').replaceAllWith(room.ledHeight ? String(room.ledHeight) : '-');
-            clonedSheet.createTextFinder('{{LED_PITCH}}').replaceAllWith(room.ledPixelPitch || '-');
-            clonedSheet.createTextFinder('{{LED_TYPE}}').replaceAllWith(room.ledType || '-');
-            clonedSheet.createTextFinder('{{LED_SUBSTRATE}}').replaceAllWith(room.ledSubstrate || '-');
-            clonedSheet.createTextFinder('{{LED_APPLICATION}}').replaceAllWith(room.ledApplication || '-');
-            clonedSheet.createTextFinder('{{INTERACTIVE_QTY}}').replaceAllWith(room.interactiveQty ? String(room.interactiveQty) : '-');
-            clonedSheet.createTextFinder('{{INTERACTIVE_SIZE}}').replaceAllWith(room.interactiveSize ? String(room.interactiveSize) : '-');
-            clonedSheet.createTextFinder('{{INTERACTIVE_BRAND}}').replaceAllWith(room.interactiveBrand || '-');
-            clonedSheet.createTextFinder('{{PROJECTOR_QTY}}').replaceAllWith(room.projectorQty ? String(room.projectorQty) : '-');
-            clonedSheet.createTextFinder('{{PROJECTOR_LUMEN}}').replaceAllWith(room.projectorLumen ? String(room.projectorLumen) : '-');
-            clonedSheet.createTextFinder('{{PROJECTOR_BRAND}}').replaceAllWith(room.projectorBrand || '-');
-            clonedSheet.createTextFinder('{{SIDE_DISPLAY_TYPE}}').replaceAllWith(room.sideDisplayType || '-');
-            clonedSheet.createTextFinder('{{SIDE_DISPLAY_QTY}}').replaceAllWith(room.sideDisplayQty ? String(room.sideDisplayQty) : '-');
-            clonedSheet.createTextFinder('{{SIDE_DISPLAY_IMAGE}}').replaceAllWith(room.sideDisplayDiffImage || '-');
-            clonedSheet.createTextFinder('{{PTZ_QTY}}').replaceAllWith(room.ptzQty ? String(room.ptzQty) : '-');
-            clonedSheet.createTextFinder('{{PTZ_TRACKING}}').replaceAllWith(room.ptzTracking || '-');
-            clonedSheet.createTextFinder('{{PTZ_BRAND}}').replaceAllWith(room.ptzBrand || '-');
-            clonedSheet.createTextFinder('{{SIGNAGE_QTY}}').replaceAllWith(room.signageQty ? String(room.signageQty) : '-');
-            clonedSheet.createTextFinder('{{SIGNAGE_SIZE}}').replaceAllWith(room.signageSize ? String(room.signageSize) : '-');
-            clonedSheet.createTextFinder('{{SIGNAGE_BRAND}}').replaceAllWith(room.signageBrand || '-');
-            clonedSheet.createTextFinder('{{VISUAL_NOTE}}').replaceAllWith(room.visualNote || '-');
-            
-            clonedSheet.createTextFinder('{{MIC_WIRED_QTY}}').replaceAllWith(room.micWiredQty ? String(room.micWiredQty) : '-');
-            clonedSheet.createTextFinder('{{MIC_WIRED_BRAND}}').replaceAllWith(room.micWiredBrand || '-');
-            clonedSheet.createTextFinder('{{MIC_HAND_QTY}}').replaceAllWith(room.micWirelessHandQty ? String(room.micWirelessHandQty) : '-');
-            clonedSheet.createTextFinder('{{MIC_HAND_BRAND}}').replaceAllWith(room.micWirelessHandBrand || '-');
-            clonedSheet.createTextFinder('{{MIC_LAPEL_QTY}}').replaceAllWith(room.micWirelessLapelQty ? String(room.micWirelessLapelQty) : '-');
-            clonedSheet.createTextFinder('{{MIC_LAPEL_BRAND}}').replaceAllWith(room.micWirelessLapelBrand || '-');
-            clonedSheet.createTextFinder('{{SPEAKER_TYPE}}').replaceAllWith(room.speakerType || '-');
-            clonedSheet.createTextFinder('{{SPEAKER_BRAND}}').replaceAllWith(room.speakerBrand || '-');
-            clonedSheet.createTextFinder('{{AIO_QTY}}').replaceAllWith(room.allInOneQty ? String(room.allInOneQty) : '-');
-            clonedSheet.createTextFinder('{{AIO_WIRELESS_TYPE}}').replaceAllWith(room.allInOneWirelessType || '-');
-            clonedSheet.createTextFinder('{{AIO_BRAND}}').replaceAllWith(room.allInOneBrand || '-');
-            clonedSheet.createTextFinder('{{VDO_PLATFORM}}').replaceAllWith(room.vdoConferencePlatform || '-');
-            clonedSheet.createTextFinder('{{TABLETOP_CHAIRMAN}}').replaceAllWith(room.tabletopChairmanQty ? String(room.tabletopChairmanQty) : '-');
-            clonedSheet.createTextFinder('{{TABLETOP_DELEGATE}}').replaceAllWith(room.tabletopDelegateQty ? String(room.tabletopDelegateQty) : '-');
-            clonedSheet.createTextFinder('{{TABLETOP_TYPE}}').replaceAllWith(room.tabletopType || '-');
-            clonedSheet.createTextFinder('{{TABLETOP_BRAND}}').replaceAllWith(room.tabletopBrand || '-');
-            clonedSheet.createTextFinder('{{TABLETOP_SPECIAL}}').replaceAllWith(room.tabletopSpecialFeatures || '-');
-            clonedSheet.createTextFinder('{{AUDIO_NOTE}}').replaceAllWith(room.audioNote || '-');
-            
-            clonedSheet.createTextFinder('{{CONTROL_TYPE}}').replaceAllWith(room.controlType || '-');
-            clonedSheet.createTextFinder('{{CONTROL_INTERFACE}}').replaceAllWith(room.controlInterface || '-');
-            clonedSheet.createTextFinder('{{CONTROL_IPAD}}').replaceAllWith(room.controlIpadStatus || '-');
-            clonedSheet.createTextFinder('{{CONTROL_NOTE}}').replaceAllWith(room.controlNote || '-');
-            clonedSheet.createTextFinder('{{NETWORK_INTERFACE}}').replaceAllWith(room.networkInterface || '-');
-            clonedSheet.createTextFinder('{{NETWORK_IP}}').replaceAllWith(room.networkIPRequirement || '-');
-            clonedSheet.createTextFinder('{{NETWORK_RESP}}').replaceAllWith(room.networkResponsibility || '-');
-            clonedSheet.createTextFinder('{{NETWORK_NOTE}}').replaceAllWith(room.networkNote || '-');
-          };
 
           const sheetsToDelete = [];
 
@@ -470,18 +339,16 @@ function doPost(e) {
               for (let i = 0; i < rooms.length; i++) {
                 const room = rooms[i];
                 const roomNameStr = room.name || ('ห้องที่ ' + (i + 1));
-                const newSheetName = sheetName + ' - ' + roomNameStr.substring(0, 20); // Keep tab name short
+                const newSheetName = sheetName + ' - ' + roomNameStr.substring(0, 20);
                 
                 const clonedSheet = sheet.copyTo(ss);
                 clonedSheet.setName(newSheetName);
                 
-                // Get step number from original sheet name (starts with 2, 3, 4, or 5)
                 let stepNum = 2;
                 if (sheetName.indexOf('3') === 0) stepNum = 3;
                 else if (sheetName.indexOf('4') === 0) stepNum = 4;
                 else if (sheetName.indexOf('5') === 0) stepNum = 5;
 
-                // Filter images for this room and step
                 const stepImages = (room.images || []).filter(function(img) {
                   return Number(img.step) === stepNum;
                 });
@@ -489,28 +356,18 @@ function doPost(e) {
                 const url1 = stepImages[0] ? stepImages[0].annotatedImage : '';
                 const url2 = stepImages[1] ? stepImages[1].annotatedImage : '';
 
-                // Fast TextFinder replacements in place
-                replacePlaceholdersInSheet(clonedSheet, room);
+                // Fast in-memory replacements for all room tags
+                replaceAllInSheetFast(clonedSheet, room);
 
-                // Replace image placeholders using native CellImage (avoids external data warning & "Allow access" banner)
+                // Replace image placeholders using native CellImage
                 const range1 = clonedSheet.createTextFinder('{{IMAGE_1}}').findNext();
                 if (range1) {
-                  if (url1) {
-                    const cellImage1 = SpreadsheetApp.newCellImage().setSourceUrl(url1).build();
-                    range1.setValue(cellImage1);
-                  } else {
-                    range1.setValue('');
-                  }
+                  range1.setValue(url1 ? SpreadsheetApp.newCellImage().setSourceUrl(url1).build() : '');
                 }
 
                 const range2 = clonedSheet.createTextFinder('{{IMAGE_2}}').findNext();
                 if (range2) {
-                  if (url2) {
-                    const cellImage2 = SpreadsheetApp.newCellImage().setSourceUrl(url2).build();
-                    range2.setValue(cellImage2);
-                  } else {
-                    range2.setValue('');
-                  }
+                  range2.setValue(url2 ? SpreadsheetApp.newCellImage().setSourceUrl(url2).build() : '');
                 }
               }
               sheetsToDelete.push(sheet);
