@@ -80,7 +80,10 @@ export function useOfflineSync() {
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify(preparedSurvey),
+            body: JSON.stringify({
+              ...preparedSurvey,
+              generateReport: true,
+            }),
           });
 
           if (response.ok) {

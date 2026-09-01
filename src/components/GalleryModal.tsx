@@ -251,6 +251,7 @@ export default function GalleryModal({ survey, isOpen, onClose, onSurveyUpdated 
               roomsData: survey.roomsData,
               status: survey.status,
               salesPersonId: survey.salesPersonId,
+              generateReport: false,
             })
           });
         } catch (apiErr) {
@@ -337,6 +338,7 @@ export default function GalleryModal({ survey, isOpen, onClose, onSurveyUpdated 
               roomsData: updatedRoomsData,
               status: survey.status,
               salesPersonId: survey.salesPersonId,
+              generateReport: false,
             })
           });
         } catch (apiErr) {

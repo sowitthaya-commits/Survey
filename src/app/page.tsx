@@ -94,14 +94,14 @@ export default function Dashboard() {
 
   // Poll if any survey is generating in the background
   useEffect(() => {
-    const hasGenerating = surveys.some(s => s.status === 'generating');
-    if (hasGenerating && isOnline) {
+    const hasGenerating = surveys.some(s => s.status === 'generating' || s.status === 'pending_sync');
+    if ((hasGenerating || syncing) && isOnline) {
       const interval = setInterval(() => {
         loadAllSurveys(true); // silent polling
-      }, 5000);
+      }, 3000);
       return () => clearInterval(interval);
     }
-  }, [surveys, isOnline]);
+  }, [surveys, isOnline, syncing]);
 
   const handleLogout = async () => {
     if (!confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) return;
