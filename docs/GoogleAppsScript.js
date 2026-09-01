@@ -88,7 +88,7 @@ function doPost(e) {
     }
 
     // Helper to find the latest active file in targetFolder by project name
-    const findLatestProjectFile = function(folder, keyword, isPdf) {
+    const findLatestProjectFile = function(folder, keyword, isPdf, sinceTimestamp) {
       if (!keyword) return null;
       try {
         const cleanKeyword = keyword.replace(/'/g, "\\'");
@@ -100,6 +100,10 @@ function doPost(e) {
         while (files.hasNext()) {
           const file = files.next();
           const created = file.getDateCreated().getTime();
+          // Ignore files created before the requested timestamp to prevent premature match with old versions
+          if (sinceTimestamp && created < (sinceTimestamp - 10000)) {
+            continue;
+          }
           if (created > latestTime) {
             latestTime = created;
             latestFile = file;
@@ -116,16 +120,17 @@ function doPost(e) {
     if (action === 'findReport') {
       const projectName = postData.projectName || '';
       const targetFolder = DriveApp.getFolderById(DOCUMENT_FOLDER_ID);
+      const sinceTimestamp = postData.sinceTimestamp ? Number(postData.sinceTimestamp) : null;
       
       let docUrl = '';
       let pdfUrl = '';
       
-      const docFile = findLatestProjectFile(targetFolder, projectName, false);
+      const docFile = findLatestProjectFile(targetFolder, projectName, false, sinceTimestamp);
       if (docFile) {
         docUrl = 'https://docs.google.com/spreadsheets/d/' + docFile.getId() + '/edit?usp=sharing';
       }
       
-      const pdfFile = findLatestProjectFile(targetFolder, projectName, true);
+      const pdfFile = findLatestProjectFile(targetFolder, projectName, true, sinceTimestamp);
       if (pdfFile) {
         pdfUrl = 'https://drive.google.com/file/d/' + pdfFile.getId() + '/view?usp=sharing';
       } else if (docFile) {

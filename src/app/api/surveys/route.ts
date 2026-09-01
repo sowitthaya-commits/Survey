@@ -82,7 +82,7 @@ export async function POST(request: Request) {
 
     // ACTION: SYNC / RECOVER URLS DIRECTLY FROM GOOGLE DRIVE
     if (body.action === 'syncDrive') {
-      const { id, projectName, customerName } = body;
+      const { id, projectName, customerName, sinceTimestamp } = body;
       if (!id) {
         return NextResponse.json({ error: 'Survey ID is required' }, { status: 400 });
       }
@@ -90,7 +90,7 @@ export async function POST(request: Request) {
       const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
       if (scriptUrl) {
         try {
-          console.log(`Syncing report URLs from Google Drive for project: ${projectName}...`);
+          console.log(`Syncing report URLs from Google Drive for project: ${projectName} (since: ${sinceTimestamp})...`);
           const res = await fetch(scriptUrl, {
             method: 'POST',
             redirect: 'follow',
@@ -98,7 +98,8 @@ export async function POST(request: Request) {
             body: JSON.stringify({
               action: 'findReport',
               projectName: projectName,
-              customerName: customerName
+              customerName: customerName,
+              sinceTimestamp: sinceTimestamp || null
             })
           });
 

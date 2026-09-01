@@ -175,7 +175,8 @@ export default function Dashboard() {
                   action: 'syncDrive',
                   id: s.id,
                   projectName: s.projectName,
-                  customerName: s.customerName
+                  customerName: s.customerName,
+                  sinceTimestamp: s.updatedAt ? new Date(s.updatedAt).getTime() : Date.now() - 60000
                 })
               });
               if (syncRes.ok) {
