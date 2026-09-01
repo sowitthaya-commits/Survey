@@ -198,8 +198,9 @@ export async function POST(request: Request) {
     // Determine if we should generate/recreate the Google Sheets report
     const shouldGenerateReport = generateReport === true || (!existing && surveyData.status === 'pending_sync');
     const targetStatus = shouldGenerateReport ? 'generating' : (surveyData.status || existing?.status || 'completed');
-    const docUrl: string | null = existing?.docUrl || null;
-    const pdfUrl: string | null = existing?.pdfUrl || null;
+    // When generating a new report, ALWAYS reset docUrl and pdfUrl to null so old links are removed!
+    const docUrl: string | null = shouldGenerateReport ? null : (existing?.docUrl || null);
+    const pdfUrl: string | null = shouldGenerateReport ? null : (existing?.pdfUrl || null);
 
     // 1. Save survey data to DB immediately so HTTP response is instant (< 1s) - completely prevents 504 Timeout!
     if (existing) {

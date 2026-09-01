@@ -162,39 +162,6 @@ export default function Dashboard() {
       mergedList.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
       
       setSurveys(mergedList);
-
-      // Auto-recover URLs for surveys that are generating or missing docUrl if files exist in Google Drive
-      if (isOnline) {
-        serverSurveys.forEach(async (s) => {
-          if (s.status === 'generating' || !s.docUrl || !s.pdfUrl) {
-            try {
-              const res = await fetch('/api/surveys', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  action: 'syncDrive',
-                  id: s.id,
-                  projectName: s.projectName,
-                  customerName: s.customerName
-                })
-              });
-              if (res.ok) {
-                const data = await res.json();
-                if (data.success && data.found) {
-                  setSurveys(prev => prev.map(item => item.id === s.id ? {
-                    ...item,
-                    status: 'completed',
-                    docUrl: data.docUrl,
-                    pdfUrl: data.pdfUrl
-                  } : item));
-                }
-              }
-            } catch (err) {
-              console.warn('Sync drive check skipped:', err);
-            }
-          }
-        });
-      }
     } catch (error) {
       console.error('Error loading surveys:', error);
     } finally {
