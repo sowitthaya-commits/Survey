@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, Images, FolderOpen, Upload, ChevronLeft, ChevronRight, 
   Download, Eye, Edit3, Image as ImageIcon, Loader2, CheckCircle2, 
-  Layers, Tag, ZoomIn, ZoomOut, RotateCw, Plus
+  Layers, Tag, ZoomIn, ZoomOut, RotateCw, Plus, Trash2
 } from 'lucide-react';
 import { offlineDb, type RoomImage } from '@/lib/offlineDb';
 
@@ -272,6 +272,93 @@ export default function GalleryModal({ survey, isOpen, onClose, onSurveyUpdated 
     }
   };
 
+  // Handle delete image
+  const handleDeleteImage = async (img: FlattenedImage, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!confirm(`คุณต้องการลบรูปภาพนี้ (${img.stepTitle || img.categoryName}) ออกจากโครงการใช่หรือไม่?`)) return;
+
+    try {
+      const now = new Date().toISOString();
+      let updatedExistingImages = [...(survey.existingImages || [])];
+      let updatedRoomsData = Array.isArray(survey.roomsData) ? JSON.parse(JSON.stringify(survey.roomsData)) : [];
+
+      if (img.category === 'building') {
+        updatedExistingImages = updatedExistingImages.filter(item => item.id !== img.rawImageObj.id && item.originalImage !== img.originalUrl);
+      } else if (img.category.startsWith('room_')) {
+        const rIdx = img.roomIndex !== undefined ? img.roomIndex : parseInt(img.category.replace('room_', ''));
+        if (updatedRoomsData[rIdx] && Array.isArray(updatedRoomsData[rIdx].images)) {
+          updatedRoomsData[rIdx].images = updatedRoomsData[rIdx].images.filter(
+            (item: RoomImage) => item.id !== img.rawImageObj.id && item.originalImage !== img.originalUrl
+          );
+        }
+      }
+
+      const updatedSurvey = {
+        ...survey,
+        existingImages: updatedExistingImages,
+        roomsData: updatedRoomsData,
+        updatedAt: now,
+      };
+
+      // 1. Delete from IndexedDB
+      try {
+        await offlineDb.draftSurveys.put(updatedSurvey);
+      } catch (dbErr) {
+        console.warn('Could not update Dexie on delete:', dbErr);
+      }
+
+      // 2. Delete from Google Drive if URL is online/cloud
+      if (img.originalUrl && !img.originalUrl.startsWith('data:image')) {
+        fetch('/api/surveys/upload', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileUrl: img.originalUrl })
+        }).catch(err => console.warn('Drive cleanup failed for orig:', err));
+      }
+      if (img.annotatedUrl && !img.annotatedUrl.startsWith('data:image') && img.annotatedUrl !== img.originalUrl) {
+        fetch('/api/surveys/upload', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileUrl: img.annotatedUrl })
+        }).catch(err => console.warn('Drive cleanup failed for anno:', err));
+      }
+
+      // 3. Sync updated survey to backend
+      if (navigator.onLine) {
+        try {
+          await fetch('/api/surveys', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: survey.id,
+              projectName: survey.projectName,
+              customerName: survey.customerName,
+              existingImages: updatedExistingImages,
+              roomsData: updatedRoomsData,
+              status: survey.status,
+              salesPersonId: survey.salesPersonId,
+            })
+          });
+        } catch (apiErr) {
+          console.warn('API sync failed on delete:', apiErr);
+        }
+      }
+
+      if (onSurveyUpdated) {
+        onSurveyUpdated(updatedSurvey);
+      }
+
+      if (lightboxIndex !== null) {
+        setLightboxIndex(null);
+      }
+
+      setUploadSuccessMsg('ลบรูปภาพออกจากโครงการเรียบร้อยแล้ว');
+      setTimeout(() => setUploadSuccessMsg(''), 4000);
+    } catch (err: any) {
+      alert('เกิดข้อผิดพลาดในการลบรูปภาพ: ' + (err.message || 'โปรดลองใหม่อีกครั้ง'));
+    }
+  };
+
   if (!isOpen || !survey) return null;
 
   const currentLightboxImg = lightboxIndex !== null ? filteredImages[lightboxIndex] : null;
@@ -431,6 +518,16 @@ export default function GalleryModal({ survey, isOpen, onClose, onSurveyUpdated 
                         </span>
                       </div>
 
+                      {/* Delete Button on Hover */}
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteImage(img, e)}
+                        className="absolute top-2 left-2 p-1.5 bg-slate-900/80 hover:bg-rose-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-xs z-10"
+                        title="ลบรูปภาพนี้ออกจากโครงการ"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+
                       {/* Annotated Badge */}
                       {img.annotatedUrl && (
                         <span className="absolute top-2 right-2 px-1.5 py-0.5 bg-indigo-600/90 backdrop-blur-xs text-white text-[10px] font-bold rounded-md flex items-center gap-1 shadow-xs">
@@ -523,6 +620,16 @@ export default function GalleryModal({ survey, isOpen, onClose, onSurveyUpdated 
               >
                 <Download className="w-4 h-4" />
               </a>
+
+              {/* Delete Button */}
+              <button
+                type="button"
+                onClick={() => handleDeleteImage(currentLightboxImg)}
+                className="p-2 bg-rose-600/80 hover:bg-rose-700 text-white rounded-lg transition"
+                title="ลบรูปภาพนี้ออกจากโครงการ"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
 
               {/* Close Lightbox */}
               <button

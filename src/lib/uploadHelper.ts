@@ -109,11 +109,17 @@ export async function uploadSurveyBase64Images(survey: any): Promise<any> {
   // 1. Process project-wide existing images
   if (updatedSurvey.existingImages && Array.isArray(updatedSurvey.existingImages)) {
     for (const img of updatedSurvey.existingImages) {
+      const isSameImage = img.originalImage === img.annotatedImage;
+
       if (img.originalImage && img.originalImage.startsWith('data:image')) {
         const compressed = await compress(img.originalImage);
-        img.originalImage = await uploadSingleBase64Image(compressed, id, `existing_step${img.step}_orig`, projectName, customerName);
+        const uploadedUrl = await uploadSingleBase64Image(compressed, id, `existing_step${img.step}_orig`, projectName, customerName);
+        img.originalImage = uploadedUrl;
+        if (isSameImage) {
+          img.annotatedImage = uploadedUrl; // ป้องกันการอัปโหลดไฟล์ซ้ำหากไม่มีการวาดเขียน
+        }
       }
-      if (img.annotatedImage && img.annotatedImage.startsWith('data:image')) {
+      if (!isSameImage && img.annotatedImage && img.annotatedImage.startsWith('data:image')) {
         const compressed = await compress(img.annotatedImage);
         img.annotatedImage = await uploadSingleBase64Image(compressed, id, `existing_step${img.step}_anno`, projectName, customerName);
       }
@@ -125,11 +131,17 @@ export async function uploadSurveyBase64Images(survey: any): Promise<any> {
     for (const room of updatedSurvey.roomsData) {
       if (room.images && Array.isArray(room.images)) {
         for (const img of room.images) {
+          const isSameImage = img.originalImage === img.annotatedImage;
+
           if (img.originalImage && img.originalImage.startsWith('data:image')) {
             const compressed = await compress(img.originalImage);
-            img.originalImage = await uploadSingleBase64Image(compressed, id, `room_${room.id}_step${img.step}_orig`, projectName, customerName);
+            const uploadedUrl = await uploadSingleBase64Image(compressed, id, `room_${room.id}_step${img.step}_orig`, projectName, customerName);
+            img.originalImage = uploadedUrl;
+            if (isSameImage) {
+              img.annotatedImage = uploadedUrl; // ป้องกันการอัปโหลดไฟล์ซ้ำหากไม่มีการวาดเขียน
+            }
           }
-          if (img.annotatedImage && img.annotatedImage.startsWith('data:image')) {
+          if (!isSameImage && img.annotatedImage && img.annotatedImage.startsWith('data:image')) {
             const compressed = await compress(img.annotatedImage);
             img.annotatedImage = await uploadSingleBase64Image(compressed, id, `room_${room.id}_step${img.step}_anno`, projectName, customerName);
           }

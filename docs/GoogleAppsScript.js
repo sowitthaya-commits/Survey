@@ -65,6 +65,28 @@ function doPost(e) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
+    // ACTION: DELETE IMAGE
+    if (action === 'deleteImage') {
+      const fileUrl = postData.fileUrl || '';
+      const fileId = postData.fileId || (fileUrl.match(/id=([a-zA-Z0-9_-]+)/) ? fileUrl.match(/id=([a-zA-Z0-9_-]+)/)[1] : (fileUrl.match(/\/d\/([a-zA-Z0-9_-]+)/) ? fileUrl.match(/\/d\/([a-zA-Z0-9_-]+)/)[1] : ''));
+      if (fileId) {
+        try {
+          const file = DriveApp.getFileById(fileId);
+          file.setTrashed(true); // ย้ายลงถังขยะใน Google Drive
+          return ContentService.createTextOutput(JSON.stringify({
+            success: true,
+            message: 'File moved to trash successfully'
+          })).setMimeType(ContentService.MimeType.JSON);
+        } catch (delErr) {
+          console.warn('Could not trash file from Google Drive: ' + delErr.toString());
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: 'File ID not found or could not be trashed'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
     // ACTION: CREATE REPORT DOC & PDF
     if (action === 'createReport') {
       const projectName = postData.projectName || 'ไม่ได้ระบุ';

@@ -174,3 +174,46 @@ export async function uploadFileToDrive(
     }
   }
 }
+
+/**
+ * Deletes or trashes a file from Google Drive or local storage.
+ */
+export async function deleteFileFromDrive(fileUrl: string): Promise<boolean> {
+  if (!fileUrl) return false;
+
+  // 1. Google Apps Script Web App
+  const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
+  if (scriptUrl) {
+    try {
+      const response = await fetch(scriptUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'deleteImage',
+          fileUrl: fileUrl
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        return !!data.success;
+      }
+    } catch (err) {
+      console.warn('Failed to delete file via Google Apps Script:', err);
+    }
+  }
+
+  // 2. Local filesystem cleanup if stored locally
+  if (fileUrl.startsWith('/uploads/')) {
+    try {
+      const localPath = path.join(process.cwd(), 'public', fileUrl);
+      if (fs.existsSync(localPath)) {
+        fs.unlinkSync(localPath);
+        return true;
+      }
+    } catch (err) {
+      console.warn('Failed to delete local file:', err);
+    }
+  }
+
+  return false;
+}
