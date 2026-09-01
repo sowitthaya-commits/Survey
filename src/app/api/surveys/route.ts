@@ -105,10 +105,15 @@ export async function POST(request: Request) {
           if (res.ok) {
             const data = await res.json();
             if (data.success && (data.docUrl || data.pdfUrl)) {
+              const resDocUrl = data.docUrl || null;
+              const resPdfUrl = data.pdfUrl || (resDocUrl && resDocUrl.includes('/spreadsheets/d/') 
+                ? resDocUrl.replace(/\/edit.*$/, '/export?format=pdf') 
+                : null);
+
               await db.update(surveys)
                 .set({
-                  docUrl: data.docUrl || null,
-                  pdfUrl: data.pdfUrl || null,
+                  docUrl: resDocUrl,
+                  pdfUrl: resPdfUrl,
                   status: 'completed',
                   updatedAt: new Date().toISOString(),
                 })
@@ -117,8 +122,8 @@ export async function POST(request: Request) {
               return NextResponse.json({
                 success: true,
                 found: true,
-                docUrl: data.docUrl,
-                pdfUrl: data.pdfUrl,
+                docUrl: resDocUrl,
+                pdfUrl: resPdfUrl,
                 status: 'completed'
               });
             }

@@ -123,16 +123,12 @@ function doPost(e) {
       const docFile = findLatestProjectFile(targetFolder, projectName, false);
       if (docFile) {
         docUrl = 'https://docs.google.com/spreadsheets/d/' + docFile.getId() + '/edit?usp=sharing';
-      }
-      
-      const pdfFile = findLatestProjectFile(targetFolder, projectName, true);
-      if (pdfFile) {
-        pdfUrl = 'https://drive.google.com/file/d/' + pdfFile.getId() + '/view?usp=sharing';
+        pdfUrl = 'https://docs.google.com/spreadsheets/d/' + docFile.getId() + '/export?format=pdf';
       }
       
       return ContentService.createTextOutput(JSON.stringify({
         success: true,
-        found: !!(docUrl || pdfUrl),
+        found: !!docUrl,
         docUrl: docUrl,
         pdfUrl: pdfUrl
       })).setMimeType(ContentService.MimeType.JSON);
@@ -511,21 +507,14 @@ function doPost(e) {
           doc.saveAndClose();
         }
         
+        try {
+          newDocFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.EDIT);
+        } catch (shareErr) {
+          console.warn("Could not set sharing permissions: " + shareErr.toString());
+        }
+
         docUrl = 'https://docs.google.com/spreadsheets/d/' + newDocFile.getId() + '/edit?usp=sharing';
         pdfUrl = 'https://docs.google.com/spreadsheets/d/' + newDocFile.getId() + '/export?format=pdf';
-        
-        try {
-          const pdfBlob = newDocFile.getAs('application/pdf');
-          pdfBlob.setName(targetFileName + '.pdf');
-          const newPdfFile = targetFolder.createFile(pdfBlob);
-          newPdfFile.setName(targetFileName + '.pdf');
-          try {
-            newPdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-          } catch (se) {}
-          pdfUrl = 'https://drive.google.com/file/d/' + newPdfFile.getId() + '/view?usp=sharing';
-        } catch (pdfErr) {
-          console.warn('PDF blob conversion note: using Google Sheets direct PDF export URL: ' + pdfErr.toString());
-        }
 
         // ค้นหาหรือสร้างโฟลเดอร์รูปภาพของโครงการเพื่อส่งกลับไปให้ระบบนำไปเปิดดูใน Gallery
         let imagesFolderUrl = '';

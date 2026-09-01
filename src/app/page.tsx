@@ -162,6 +162,39 @@ export default function Dashboard() {
       mergedList.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
       
       setSurveys(mergedList);
+
+      // Auto-detect completed document from Google Drive for any survey currently generating
+      if (isOnline) {
+        serverSurveys.forEach(async (s) => {
+          if (s.status === 'generating') {
+            try {
+              const syncRes = await fetch('/api/surveys', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'syncDrive',
+                  id: s.id,
+                  projectName: s.projectName,
+                  customerName: s.customerName
+                })
+              });
+              if (syncRes.ok) {
+                const syncData = await syncRes.json();
+                if (syncData.success && syncData.found) {
+                  setSurveys(prev => prev.map(item => item.id === s.id ? {
+                    ...item,
+                    status: 'completed',
+                    docUrl: syncData.docUrl,
+                    pdfUrl: syncData.pdfUrl
+                  } : item));
+                }
+              }
+            } catch (err) {
+              console.warn('SyncDrive check note:', err);
+            }
+          }
+        });
+      }
     } catch (error) {
       console.error('Error loading surveys:', error);
     } finally {
