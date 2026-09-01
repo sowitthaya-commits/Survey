@@ -92,16 +92,53 @@ function doPost(e) {
       const projectName = postData.projectName || 'ไม่ได้ระบุ';
       const customerName = postData.customerName || 'ไม่ได้ระบุ';
       const targetFolder = DriveApp.getFolderById(DOCUMENT_FOLDER_ID);
+      const targetFileName = 'รายงานการสำรวจ - ' + projectName + ' (' + customerName + ')';
       
+      // --- 0. ลบไฟล์เอกสารเก่าและ PDF เก่าของโครงการนี้ทิ้งอัตโนมัติ เพื่อป้องกันไฟล์ขยะซ้ำซ้อน ---
+      const trashFileByUrl = function(url) {
+        if (!url || typeof url !== 'string') return;
+        const match = url.match(/[-\w]{25,}/);
+        if (match) {
+          try {
+            const oldFile = DriveApp.getFileById(match[0]);
+            oldFile.setTrashed(true);
+            console.log('Trashed old report file by URL ID: ' + match[0]);
+          } catch (e) {
+            console.warn('Could not trash old file by URL: ' + e.toString());
+          }
+        }
+      };
+
+      // ลบจาก URL เดิมที่ส่งมา
+      trashFileByUrl(postData.oldDocUrl);
+      trashFileByUrl(postData.oldPdfUrl);
+
+      // ค้นหาไฟล์ชื่อเดียวกันที่มีอยู่เดิมในโฟลเดอร์ปลายทางแล้วย้ายลงถังขยะ
+      try {
+        const existingDocs = targetFolder.getFilesByName(targetFileName);
+        while (existingDocs.hasNext()) {
+          const oldDoc = existingDocs.next();
+          oldDoc.setTrashed(true);
+          console.log('Trashed duplicate document in target folder: ' + oldDoc.getId());
+        }
+        const existingPdfs = targetFolder.getFilesByName(targetFileName + '.pdf');
+        while (existingPdfs.hasNext()) {
+          const oldPdf = existingPdfs.next();
+          oldPdf.setTrashed(true);
+          console.log('Trashed duplicate PDF in target folder: ' + oldPdf.getId());
+        }
+      } catch (cleanErr) {
+        console.warn('Error cleaning up existing files in target folder: ' + cleanErr.toString());
+      }
+
       // คัดลอกแบบฟอร์มเปล่าเพื่อเตรียมทำเอกสารใหม่
-      // หมายเหตุ: ตรงนี้หากยังไม่มีไฟล์ Template จริง ระบบจะเขียนเป็นข้อความลง Text แทนชั่วคราว
       let docUrl = '';
       let pdfUrl = '';
       
       try {
         const templateFile = DriveApp.getFileById(TEMPLATE_DOC_ID);
         const mimeType = templateFile.getMimeType();
-        const newDocFile = templateFile.makeCopy('รายงานการสำรวจ - ' + projectName + ' (' + customerName + ')', targetFolder);
+        const newDocFile = templateFile.makeCopy(targetFileName, targetFolder);
         console.log('Successfully copied template file. New file ID: ' + newDocFile.getId() + ', MIME Type: ' + mimeType);
         
         if (mimeType.indexOf('spreadsheet') !== -1) {

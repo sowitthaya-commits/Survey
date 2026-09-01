@@ -181,6 +181,8 @@ export async function POST(request: Request) {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 action: 'createReport',
+                oldDocUrl: existing?.docUrl || null,
+                oldPdfUrl: existing?.pdfUrl || null,
                 projectName: surveyData.projectName || body.projectName,
                 customerName: surveyData.customerName || body.customerName,
                 budget: surveyData.budget || body.budget,

@@ -119,7 +119,7 @@ export default function Dashboard() {
 
       if (isOnline) {
         try {
-          const response = await fetch('/api/surveys');
+          const response = await fetch('/api/surveys?t=' + Date.now(), { cache: 'no-store' });
           if (response.ok) {
             serverSurveys = await response.json();
           }
@@ -153,17 +153,12 @@ export default function Dashboard() {
         roomsData: d.roomsData || [],
       }));
 
-      const mergedList = [...localSurveys];
-      
-      serverSurveys.forEach(serverSurvey => {
-        const index = mergedList.findIndex(local => local.id === serverSurvey.id);
-        if (index > -1) {
-          mergedList[index] = serverSurvey;
-        } else {
-          mergedList.push(serverSurvey);
-        }
-      });
+      // Server survey always takes precedence if available
+      const map = new Map<string, SurveyItem>();
+      localSurveys.forEach(l => map.set(l.id, l));
+      serverSurveys.forEach(s => map.set(s.id, s));
 
+      const mergedList = Array.from(map.values());
       mergedList.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
       
       setSurveys(mergedList);
@@ -415,8 +410,8 @@ export default function Dashboard() {
 
                           {(() => {
                             const isGenerating = survey.status === 'generating' || survey.status === 'pending_sync';
-                            const isRealDoc = !isGenerating && !!(survey.docUrl && (survey.docUrl.includes('spreadsheets/d/') || survey.docUrl.includes('drive.google.com/')));
-                            const isRealPdf = !isGenerating && !!(survey.pdfUrl && survey.pdfUrl.includes('drive.google.com/'));
+                            const isRealDoc = !isGenerating && !!survey.docUrl && survey.docUrl.startsWith('http');
+                            const isRealPdf = !isGenerating && !!survey.pdfUrl && (survey.pdfUrl.startsWith('http') || survey.pdfUrl.startsWith('/uploads/'));
                             
                             return (
                               <>
