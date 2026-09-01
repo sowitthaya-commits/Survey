@@ -197,61 +197,11 @@ export async function POST(request: Request) {
 
     // Determine if we should generate/recreate the Google Sheets report
     const shouldGenerateReport = generateReport === true || (!existing && surveyData.status === 'pending_sync');
-    let targetStatus = shouldGenerateReport ? 'generating' : (surveyData.status || existing?.status || 'completed');
-    let docUrl: string | null = existing?.docUrl || null;
-    let pdfUrl: string | null = existing?.pdfUrl || null;
+    const targetStatus = shouldGenerateReport ? 'generating' : (surveyData.status || existing?.status || 'completed');
+    const docUrl: string | null = existing?.docUrl || null;
+    const pdfUrl: string | null = existing?.pdfUrl || null;
 
-    // Trigger Apps Script report creation DIRECTLY during request so DB is guaranteed to update
-    if (shouldGenerateReport) {
-      const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
-      if (scriptUrl) {
-        try {
-          console.log('Requesting Google Apps Script Web App to create report...');
-          const response = await fetch(scriptUrl, {
-            method: 'POST',
-            redirect: 'follow',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'createReport',
-              oldDocUrl: existing?.docUrl || null,
-              oldPdfUrl: existing?.pdfUrl || null,
-              projectName: surveyData.projectName || body.projectName,
-              customerName: surveyData.customerName || body.customerName,
-              budget: surveyData.budget || body.budget,
-              salesPersonName: salesPersonName || body.salesPersonName,
-              surveyDate: surveyData.surveyDate || body.surveyDate,
-              requestDate: surveyData.requestDate || body.requestDate,
-              quotationDeadline: surveyData.quotationDeadline || body.quotationDeadline,
-              contactName: surveyData.contactName || body.contactName,
-              contactPhone: surveyData.contactPhone || body.contactPhone,
-              locationAddress: surveyData.locationAddress || body.locationAddress,
-              locationLat: surveyData.locationLat || body.locationLat,
-              locationLng: surveyData.locationLng || body.locationLng,
-              roomsData: rooms,
-              existingImages: existingImagesList,
-              id: id
-            })
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            if (data.success) {
-              docUrl = data.docUrl || docUrl;
-              pdfUrl = data.pdfUrl || pdfUrl;
-              targetStatus = 'completed';
-              console.log('Apps Script report generated successfully:', { docUrl, pdfUrl });
-            } else {
-              console.warn('Apps Script report generation failed:', data.error);
-            }
-          } else {
-            console.warn(`Apps Script report HTTP error: ${response.status}`);
-          }
-        } catch (scriptErr) {
-          console.error('Failed calling Apps Script to create report:', scriptErr);
-        }
-      }
-    }
-
+    // 1. Save survey data to DB immediately so HTTP response is instant (< 1s) - completely prevents 504 Timeout!
     if (existing) {
       await db.update(surveys)
         .set({
@@ -279,6 +229,56 @@ export async function POST(request: Request) {
           updatedAt: now,
           status: targetStatus,
         });
+    }
+
+    // 2. Trigger Google Apps Script report creation in background (Non-blocking)
+    if (shouldGenerateReport) {
+      const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
+      if (scriptUrl) {
+        console.log('Triggering Google Apps Script Web App to create report in background...');
+        fetch(scriptUrl, {
+          method: 'POST',
+          redirect: 'follow',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'createReport',
+            oldDocUrl: existing?.docUrl || null,
+            oldPdfUrl: existing?.pdfUrl || null,
+            projectName: surveyData.projectName || body.projectName,
+            customerName: surveyData.customerName || body.customerName,
+            budget: surveyData.budget || body.budget,
+            salesPersonName: salesPersonName || body.salesPersonName,
+            surveyDate: surveyData.surveyDate || body.surveyDate,
+            requestDate: surveyData.requestDate || body.requestDate,
+            quotationDeadline: surveyData.quotationDeadline || body.quotationDeadline,
+            contactName: surveyData.contactName || body.contactName,
+            contactPhone: surveyData.contactPhone || body.contactPhone,
+            locationAddress: surveyData.locationAddress || body.locationAddress,
+            locationLat: surveyData.locationLat || body.locationLat,
+            locationLng: surveyData.locationLng || body.locationLng,
+            roomsData: rooms,
+            existingImages: existingImagesList,
+            id: id
+          })
+        }).then(async (res) => {
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && (data.docUrl || data.pdfUrl)) {
+              await db.update(surveys)
+                .set({
+                  docUrl: data.docUrl || null,
+                  pdfUrl: data.pdfUrl || null,
+                  status: 'completed',
+                  updatedAt: new Date().toISOString(),
+                })
+                .where(eq(surveys.id, id));
+              console.log('Background: Successfully saved docUrl/pdfUrl from Apps Script into DB');
+            }
+          }
+        }).catch((err) => {
+          console.warn('Background createReport fetch warning (handled via polling):', err);
+        });
+      }
     }
 
     return NextResponse.json({
