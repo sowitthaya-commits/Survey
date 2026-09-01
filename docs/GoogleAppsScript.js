@@ -170,6 +170,60 @@ function doPost(e) {
             console.log('Sheet "' + sheetName + '" replacements count: PROJECT_NAME=' + r1 + ', CUSTOMER_NAME=' + r2 + ', BUDGET=' + r3);
           }
           
+          // --- 1.1 Replace Building / Site Frontage Images (Step 1 Photos) across sheets ---
+          const existingImages = postData.existingImages || [];
+          const bUrl1 = existingImages[0] ? (existingImages[0].annotatedImage || existingImages[0].originalImage) : '';
+          const bUrl2 = existingImages[1] ? (existingImages[1].annotatedImage || existingImages[1].originalImage) : '';
+          const bUrl3 = existingImages[2] ? (existingImages[2].annotatedImage || existingImages[2].originalImage) : '';
+          const bUrl4 = existingImages[3] ? (existingImages[3].annotatedImage || existingImages[3].originalImage) : '';
+
+          const buildingImageMap = [
+            { tags: ['{{BUILDING_IMAGE_1}}', '{{SITE_IMAGE_1}}', '{{EXISTING_IMAGE_1}}', '{{IMAGE_BUILDING_1}}'], url: bUrl1 },
+            { tags: ['{{BUILDING_IMAGE_2}}', '{{SITE_IMAGE_2}}', '{{EXISTING_IMAGE_2}}', '{{IMAGE_BUILDING_2}}'], url: bUrl2 },
+            { tags: ['{{BUILDING_IMAGE_3}}', '{{SITE_IMAGE_3}}', '{{EXISTING_IMAGE_3}}', '{{IMAGE_BUILDING_3}}'], url: bUrl3 },
+            { tags: ['{{BUILDING_IMAGE_4}}', '{{SITE_IMAGE_4}}', '{{EXISTING_IMAGE_4}}', '{{IMAGE_BUILDING_4}}'], url: bUrl4 },
+          ];
+
+          for (const sheet of sheets) {
+            for (const item of buildingImageMap) {
+              for (const tag of item.tags) {
+                const range = sheet.createTextFinder(tag).findNext();
+                if (range) {
+                  if (item.url) {
+                    const cellImg = SpreadsheetApp.newCellImage().setSourceUrl(item.url).build();
+                    range.setValue(cellImg);
+                  } else {
+                    range.setValue('');
+                  }
+                }
+              }
+            }
+
+            // ถ้าเป็นชีทขั้นตอนที่ 1 หรือชีทข้อมูลทั่วไปที่มี {{IMAGE_1}} หรือ {{IMAGE_2}}
+            const isStep1Sheet = sheet.getName().indexOf('1') === 0 || sheet.getName().includes('ทั่วไป') || sheet.getName().includes('อาคาร');
+            if (isStep1Sheet) {
+              const rImg1 = sheet.createTextFinder('{{IMAGE_1}}').findNext();
+              if (rImg1) {
+                if (bUrl1) {
+                  const cellImg1 = SpreadsheetApp.newCellImage().setSourceUrl(bUrl1).build();
+                  rImg1.setValue(cellImg1);
+                } else {
+                  rImg1.setValue('');
+                }
+              }
+
+              const rImg2 = sheet.createTextFinder('{{IMAGE_2}}').findNext();
+              if (rImg2) {
+                if (bUrl2) {
+                  const cellImg2 = SpreadsheetApp.newCellImage().setSourceUrl(bUrl2).build();
+                  rImg2.setValue(cellImg2);
+                } else {
+                  rImg2.setValue('');
+                }
+              }
+            }
+          }
+          
           const rooms = postData.roomsData || [];
           
           // --- 2. Unified Room Placeholders Replacer ---

@@ -196,6 +196,7 @@ export async function POST(request: Request) {
                 locationLat: surveyData.locationLat || body.locationLat,
                 locationLng: surveyData.locationLng || body.locationLng,
                 roomsData: rooms,
+                existingImages: existingImagesList,
                 id: id
               })
             });
