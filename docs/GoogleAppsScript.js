@@ -215,8 +215,84 @@ function doPost(e) {
           };
 
           const rooms = postData.roomsData || [];
+
+          // --- 2. Unified Room Placeholders Replacer ---
+          const replaceRoomPlaceholders = (text, room) => {
+            if (typeof text !== 'string' || !room) return text;
+            
+            return text
+              // Step 2: Room structure
+              .replace(/\{\{ROOM_NAME\}\}/g, room.name || '')
+              .replace(/\{\{ROOM_FLOOR\}\}/g, room.floor || '')
+              .replace(/\{\{ROOM_WIDTH\}\}/g, room.roomWidth ? String(room.roomWidth) : '-')
+              .replace(/\{\{ROOM_LENGTH\}\}/g, room.roomLength ? String(room.roomLength) : '-')
+              .replace(/\{\{ROOM_HEIGHT\}\}/g, room.roomHeight ? String(room.roomHeight) : '-')
+              .replace(/\{\{INSTALLATION_TYPE\}\}/g, room.installationType || '-')
+              .replace(/\{\{SURFACE_TYPE\}\}/g, room.surfaceType || '-')
+              .replace(/\{\{STRUCTURE_RESP\}\}/g, room.structureResponsibility || '-')
+              .replace(/\{\{CABLING_RESP\}\}/g, room.cablingResponsibility || '-')
+              .replace(/\{\{POWER_RESP\}\}/g, room.mainPowerResponsibility || '-')
+              .replace(/\{\{DISTANCE_CONTROL\}\}/g, room.distanceToControlRoom ? String(room.distanceToControlRoom) : '-')
+              .replace(/\{\{RACK_LOCATION\}\}/g, room.rackLocation || '-')
+              .replace(/\{\{RACK_RESP\}\}/g, room.rackResponsibility || '-')
+              .replace(/\{\{RACK_POWER_RESP\}\}/g, room.rackPowerSource || '-')
+              .replace(/\{\{WALL_PLATE_WIRING\}\}/g, room.wallPlateWiring || '-')
+              .replace(/\{\{WALL_PLATE_TYPE\}\}/g, room.wallPlateType || '-')
+              .replace(/\{\{WALL_PLATE_LOC\}\}/g, room.wallPlateLocation || '-')
+              // Step 3: Visual / Display
+              .replace(/\{\{LED_WIDTH\}\}/g, room.ledWidth ? String(room.ledWidth) : '-')
+              .replace(/\{\{LED_HEIGHT\}\}/g, room.ledHeight ? String(room.ledHeight) : '-')
+              .replace(/\{\{LED_PITCH\}\}/g, room.ledPixelPitch || '-')
+              .replace(/\{\{LED_TYPE\}\}/g, room.ledType || '-')
+              .replace(/\{\{LED_SUBSTRATE\}\}/g, room.ledSubstrate || '-')
+              .replace(/\{\{LED_APPLICATION\}\}/g, room.ledApplication || '-')
+              .replace(/\{\{INTERACTIVE_QTY\}\}/g, room.interactiveQty ? String(room.interactiveQty) : '-')
+              .replace(/\{\{INTERACTIVE_SIZE\}\}/g, room.interactiveSize ? String(room.interactiveSize) : '-')
+              .replace(/\{\{INTERACTIVE_BRAND\}\}/g, room.interactiveBrand || '-')
+              .replace(/\{\{PROJECTOR_QTY\}\}/g, room.projectorQty ? String(room.projectorQty) : '-')
+              .replace(/\{\{PROJECTOR_LUMEN\}\}/g, room.projectorLumen ? String(room.projectorLumen) : '-')
+              .replace(/\{\{PROJECTOR_BRAND\}\}/g, room.projectorBrand || '-')
+              .replace(/\{\{SIDE_DISPLAY_TYPE\}\}/g, room.sideDisplayType || '-')
+              .replace(/\{\{SIDE_DISPLAY_QTY\}\}/g, room.sideDisplayQty ? String(room.sideDisplayQty) : '-')
+              .replace(/\{\{SIDE_DISPLAY_IMAGE\}\}/g, room.sideDisplayDiffImage || '-')
+              .replace(/\{\{PTZ_QTY\}\}/g, room.ptzQty ? String(room.ptzQty) : '-')
+              .replace(/\{\{PTZ_TRACKING\}\}/g, room.ptzTracking || '-')
+              .replace(/\{\{PTZ_BRAND\}\}/g, room.ptzBrand || '-')
+              .replace(/\{\{SIGNAGE_QTY\}\}/g, room.signageQty ? String(room.signageQty) : '-')
+              .replace(/\{\{SIGNAGE_SIZE\}\}/g, room.signageSize ? String(room.signageSize) : '-')
+              .replace(/\{\{SIGNAGE_BRAND\}\}/g, room.signageBrand || '-')
+              .replace(/\{\{VISUAL_NOTE\}\}/g, room.visualNote || '-')
+              // Step 4: Audio
+              .replace(/\{\{MIC_WIRED_QTY\}\}/g, room.micWiredQty ? String(room.micWiredQty) : '-')
+              .replace(/\{\{MIC_WIRED_BRAND\}\}/g, room.micWiredBrand || '-')
+              .replace(/\{\{MIC_HAND_QTY\}\}/g, room.micWirelessHandQty ? String(room.micWirelessHandQty) : '-')
+              .replace(/\{\{MIC_HAND_BRAND\}\}/g, room.micWirelessHandBrand || '-')
+              .replace(/\{\{MIC_LAPEL_QTY\}\}/g, room.micWirelessLapelQty ? String(room.micWirelessLapelQty) : '-')
+              .replace(/\{\{MIC_LAPEL_BRAND\}\}/g, room.micWirelessLapelBrand || '-')
+              .replace(/\{\{SPEAKER_TYPE\}\}/g, room.speakerType || '-')
+              .replace(/\{\{SPEAKER_BRAND\}\}/g, room.speakerBrand || '-')
+              .replace(/\{\{AIO_QTY\}\}/g, room.allInOneQty ? String(room.allInOneQty) : '-')
+              .replace(/\{\{AIO_WIRELESS_TYPE\}\}/g, room.allInOneWirelessType || '-')
+              .replace(/\{\{AIO_BRAND\}\}/g, room.allInOneBrand || '-')
+              .replace(/\{\{VDO_PLATFORM\}\}/g, room.vdoConferencePlatform || '-')
+              .replace(/\{\{TABLETOP_CHAIRMAN\}\}/g, room.tabletopChairmanQty ? String(room.tabletopChairmanQty) : '-')
+              .replace(/\{\{TABLETOP_DELEGATE\}\}/g, room.tabletopDelegateQty ? String(room.tabletopDelegateQty) : '-')
+              .replace(/\{\{TABLETOP_TYPE\}\}/g, room.tabletopType || '-')
+              .replace(/\{\{TABLETOP_BRAND\}\}/g, room.tabletopBrand || '-')
+              .replace(/\{\{TABLETOP_SPECIAL\}\}/g, room.tabletopSpecialFeatures || '-')
+              .replace(/\{\{AUDIO_NOTE\}\}/g, room.audioNote || '-')
+              // Step 5: Control & Network
+              .replace(/\{\{CONTROL_TYPE\}\}/g, room.controlType || '-')
+              .replace(/\{\{CONTROL_INTERFACE\}\}/g, room.controlInterface || '-')
+              .replace(/\{\{CONTROL_IPAD\}\}/g, room.controlIpadStatus || '-')
+              .replace(/\{\{CONTROL_NOTE\}\}/g, room.controlNote || '-')
+              .replace(/\{\{NETWORK_INTERFACE\}\}/g, room.networkInterface || '-')
+              .replace(/\{\{NETWORK_IP\}\}/g, room.networkIPRequirement || '-')
+              .replace(/\{\{NETWORK_RESP\}\}/g, room.networkResponsibility || '-')
+              .replace(/\{\{NETWORK_NOTE\}\}/g, room.networkNote || '-');
+          };
           
-          // --- 2. Fast In-Memory Sheet Replacer (10x Speedup) ---
+          // --- 3. Fast In-Memory Sheet Replacer (10x Speedup) ---
           const replaceAllInSheetFast = (sheet, room) => {
             const lastRow = sheet.getLastRow();
             const lastCol = sheet.getLastColumn();
