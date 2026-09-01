@@ -8,11 +8,12 @@ import { syncMasterDataCache } from '@/lib/offlineSyncHelper';
 import { 
   Plus, Search, FileText, Download, Edit2, Trash2, Database, 
   Wifi, WifiOff, RefreshCw, AlertCircle, FileSpreadsheet, Loader2, 
-  CheckCircle2, Eye, Copy, X, MapPin, Monitor, Volume2, ShieldCheck, Image as ImageIcon, Check, LogOut,
+  CheckCircle2, Eye, Copy, X, MapPin, Monitor, Volume2, ShieldCheck, Image as ImageIcon, Images, Check, LogOut,
   HelpCircle, AlertTriangle, XCircle, Info
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
+import GalleryModal from '@/components/GalleryModal';
 
 interface SurveyItem {
   id: string;
@@ -45,6 +46,9 @@ export default function Dashboard() {
   const [surveys, setSurveys] = useState<SurveyItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [masterSynced, setMasterSynced] = useState(false);
+
+  // Gallery Modal state
+  const [gallerySurvey, setGallerySurvey] = useState<SurveyItem | null>(null);
 
   // Summary Modal state
   const [selectedSurvey, setSelectedSurvey] = useState<SurveyItem | null>(null);
@@ -445,6 +449,16 @@ export default function Dashboard() {
                                 >
                                   <Download className="w-4 h-4" />
                                 </a>
+
+                                {/* Photo Gallery Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => setGallerySurvey(survey)}
+                                  className="p-2 bg-violet-50 hover:bg-violet-100 text-violet-600 hover:text-violet-800 rounded-lg transition-all"
+                                  title="คลังภาพถ่ายหน้างาน (Photo Gallery)"
+                                >
+                                  <Images className="w-4 h-4" />
+                                </button>
                               </>
                             );
                           })()}
@@ -658,6 +672,19 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Photo Gallery Modal */}
+      {gallerySurvey && (
+        <GalleryModal
+          survey={gallerySurvey}
+          isOpen={!!gallerySurvey}
+          onClose={() => setGallerySurvey(null)}
+          onSurveyUpdated={(updated) => {
+            setSurveys(prev => prev.map(s => s.id === updated.id ? updated : s));
+            setGallerySurvey(updated);
+          }}
+        />
       )}
     </div>
   );
