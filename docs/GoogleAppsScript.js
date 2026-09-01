@@ -87,29 +87,47 @@ function doPost(e) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
+    // Helper to find the latest active file in targetFolder by project name
+    const findLatestProjectFile = function(folder, keyword, isPdf) {
+      if (!keyword) return null;
+      try {
+        const cleanKeyword = keyword.replace(/'/g, "\\'");
+        const mimeFilter = isPdf ? " and mimeType = 'application/pdf'" : " and mimeType != 'application/pdf'";
+        const query = "title contains '" + cleanKeyword + "'" + mimeFilter + " and trashed = false";
+        const files = folder.searchFiles(query);
+        let latestFile = null;
+        let latestTime = 0;
+        while (files.hasNext()) {
+          const file = files.next();
+          const created = file.getDateCreated().getTime();
+          if (created > latestTime) {
+            latestTime = created;
+            latestFile = file;
+          }
+        }
+        return latestFile;
+      } catch (e) {
+        console.warn('findLatestProjectFile error: ' + e.toString());
+        return null;
+      }
+    };
+
     // ACTION: FIND EXISTING REPORT IN GOOGLE DRIVE
     if (action === 'findReport') {
       const projectName = postData.projectName || '';
-      const customerName = postData.customerName || '';
       const targetFolder = DriveApp.getFolderById(DOCUMENT_FOLDER_ID);
-      const targetFileName = 'รายงานการสำรวจ - ' + projectName + ' (' + customerName + ')';
       
       let docUrl = '';
       let pdfUrl = '';
       
-      try {
-        const docs = targetFolder.getFilesByName(targetFileName);
-        if (docs.hasNext()) {
-          const docFile = docs.next();
-          docUrl = 'https://docs.google.com/spreadsheets/d/' + docFile.getId() + '/edit?usp=sharing';
-        }
-        const pdfs = targetFolder.getFilesByName(targetFileName + '.pdf');
-        if (pdfs.hasNext()) {
-          const pdfFile = pdfs.next();
-          pdfUrl = 'https://drive.google.com/file/d/' + pdfFile.getId() + '/view?usp=sharing';
-        }
-      } catch (err) {
-        console.warn('Error finding report in Drive: ' + err.toString());
+      const docFile = findLatestProjectFile(targetFolder, projectName, false);
+      if (docFile) {
+        docUrl = 'https://docs.google.com/spreadsheets/d/' + docFile.getId() + '/edit?usp=sharing';
+      }
+      
+      const pdfFile = findLatestProjectFile(targetFolder, projectName, true);
+      if (pdfFile) {
+        pdfUrl = 'https://drive.google.com/file/d/' + pdfFile.getId() + '/view?usp=sharing';
       }
       
       return ContentService.createTextOutput(JSON.stringify({
@@ -146,19 +164,15 @@ function doPost(e) {
       trashFileByUrl(postData.oldDocUrl);
       trashFileByUrl(postData.oldPdfUrl);
 
-      // ค้นหาไฟล์ชื่อเดียวกันที่มีอยู่เดิมในโฟลเดอร์ปลายทางแล้วย้ายลงถังขยะ
+      // ค้นหาไฟล์โครงการนี้ที่มีอยู่เดิมทั้งหมดในโฟลเดอร์ปลายทางแล้วย้ายลงถังขยะ (ลบทั้ง Docs และ PDFs เก่า)
       try {
-        const existingDocs = targetFolder.getFilesByName(targetFileName);
-        while (existingDocs.hasNext()) {
-          const oldDoc = existingDocs.next();
-          oldDoc.setTrashed(true);
-          console.log('Trashed duplicate document in target folder: ' + oldDoc.getId());
-        }
-        const existingPdfs = targetFolder.getFilesByName(targetFileName + '.pdf');
-        while (existingPdfs.hasNext()) {
-          const oldPdf = existingPdfs.next();
-          oldPdf.setTrashed(true);
-          console.log('Trashed duplicate PDF in target folder: ' + oldPdf.getId());
+        const cleanKeyword = projectName.replace(/'/g, "\\'");
+        const cleanQuery = "title contains '" + cleanKeyword + "' and trashed = false";
+        const oldFiles = targetFolder.searchFiles(cleanQuery);
+        while (oldFiles.hasNext()) {
+          const oldFile = oldFiles.next();
+          oldFile.setTrashed(true);
+          console.log('Trashed previous project file: ' + oldFile.getName() + ' (' + oldFile.getId() + ')');
         }
       } catch (cleanErr) {
         console.warn('Error cleaning up existing files in target folder: ' + cleanErr.toString());

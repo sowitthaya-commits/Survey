@@ -166,7 +166,7 @@ export default function Dashboard() {
       // Auto-recover URLs for surveys that are generating or missing docUrl if files exist in Google Drive
       if (isOnline) {
         serverSurveys.forEach(async (s) => {
-          if (s.status === 'generating' || (!s.docUrl && s.status === 'completed')) {
+          if (s.status === 'generating' || !s.docUrl || !s.pdfUrl) {
             try {
               const res = await fetch('/api/surveys', {
                 method: 'POST',
