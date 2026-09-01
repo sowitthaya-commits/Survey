@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Trash2, Undo, Circle, Type, Eye, Check, Edit3, Image as ImageIcon, RotateCw, Square, Hand } from 'lucide-react';
+import { Trash2, Undo, Circle, Type, Eye, Check, Edit3, Image as ImageIcon, RotateCw, Square, Hand, Pencil } from 'lucide-react';
 
 interface ImageAnnotationProps {
   imageSrc: string; // Base64 string of original image
@@ -10,6 +10,7 @@ interface ImageAnnotationProps {
 }
 
 type Shape = 
+  | { type: 'freehand'; points: { x: number; y: number }[]; color: string; width: number }
   | { type: 'line'; x1: number; y1: number; x2: number; y2: number; color: string; width: number }
   | { type: 'circle'; cx: number; cy: number; r: number; color: string; width: number }
   | { type: 'rect'; x1: number; y1: number; x2: number; y2: number; color: string; width: number }
@@ -19,7 +20,7 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [imgElement, setImgElement] = useState<HTMLImageElement | null>(null);
-  const [tool, setTool] = useState<'line' | 'circle' | 'rect' | 'text' | 'pan'>('line');
+  const [tool, setTool] = useState<'freehand' | 'line' | 'circle' | 'rect' | 'text' | 'pan'>('freehand');
   const [color, setColor] = useState('#ef4444'); // default red
   const [lineWidth, setLineWidth] = useState(3);
   const [textSize, setTextSize] = useState(18);
@@ -27,6 +28,7 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
+  const [currentPoints, setCurrentPoints] = useState<{ x: number; y: number }[]>([]);
 
   // Zoom & Pan states
   const [zoom, setZoom] = useState(1);
@@ -75,7 +77,7 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
     canvas.height = imgElement.height;
 
     draw(ctx, canvas.width, canvas.height);
-  }, [imgElement, shapes, isDrawing, currentPos, tool, color, lineWidth, textSize, zoom, pan]);
+  }, [imgElement, shapes, isDrawing, currentPos, currentPoints, tool, color, lineWidth, textSize, zoom, pan]);
 
   const draw = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
     if (!imgElement) return;
@@ -96,8 +98,35 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
       ctx.strokeStyle = shape.color;
       ctx.fillStyle = shape.color;
 
-      if (shape.type === 'line') {
+      if (shape.type === 'freehand') {
+        if (shape.points && shape.points.length > 0) {
+          ctx.lineWidth = (shape.width || 3) / zoom;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.beginPath();
+          ctx.moveTo(shape.points[0].x, shape.points[0].y);
+
+          if (shape.points.length === 1) {
+            ctx.lineTo(shape.points[0].x + 0.1, shape.points[0].y + 0.1);
+          } else if (shape.points.length === 2) {
+            ctx.lineTo(shape.points[1].x, shape.points[1].y);
+          } else {
+            for (let i = 1; i < shape.points.length - 1; i++) {
+              const xc = (shape.points[i].x + shape.points[i + 1].x) / 2;
+              const yc = (shape.points[i].y + shape.points[i + 1].y) / 2;
+              ctx.quadraticCurveTo(shape.points[i].x, shape.points[i].y, xc, yc);
+            }
+            ctx.lineTo(
+              shape.points[shape.points.length - 1].x,
+              shape.points[shape.points.length - 1].y
+            );
+          }
+          ctx.stroke();
+        }
+      } else if (shape.type === 'line') {
         ctx.lineWidth = (shape.width || 3) / zoom;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
         ctx.beginPath();
         ctx.moveTo(shape.x1, shape.y1);
         ctx.lineTo(shape.x2, shape.y2);
@@ -123,8 +152,31 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
       ctx.strokeStyle = color;
       ctx.fillStyle = color;
       ctx.lineWidth = lineWidth / zoom;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
 
-      if (tool === 'line') {
+      if (tool === 'freehand') {
+        if (currentPoints.length > 0) {
+          ctx.beginPath();
+          ctx.moveTo(currentPoints[0].x, currentPoints[0].y);
+          if (currentPoints.length === 1) {
+            ctx.lineTo(currentPoints[0].x + 0.1, currentPoints[0].y + 0.1);
+          } else if (currentPoints.length === 2) {
+            ctx.lineTo(currentPoints[1].x, currentPoints[1].y);
+          } else {
+            for (let i = 1; i < currentPoints.length - 1; i++) {
+              const xc = (currentPoints[i].x + currentPoints[i + 1].x) / 2;
+              const yc = (currentPoints[i].y + currentPoints[i + 1].y) / 2;
+              ctx.quadraticCurveTo(currentPoints[i].x, currentPoints[i].y, xc, yc);
+            }
+            ctx.lineTo(
+              currentPoints[currentPoints.length - 1].x,
+              currentPoints[currentPoints.length - 1].y
+            );
+          }
+          ctx.stroke();
+        }
+      } else if (tool === 'line') {
         ctx.beginPath();
         ctx.moveTo(startPos.x, startPos.y);
         ctx.lineTo(currentPos.x, currentPos.y);
@@ -219,7 +271,9 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
     setStartPos(coords);
     setCurrentPos(coords);
 
-    if (tool === 'text') {
+    if (tool === 'freehand') {
+      setCurrentPoints([coords]);
+    } else if (tool === 'text') {
       const text = prompt('พิมพ์ระยะทาง หรือข้อความประกอบ:');
       if (text) {
         setShapes([
@@ -283,6 +337,10 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
     }
     const coords = getCoordinates(e);
     setCurrentPos(coords);
+
+    if (tool === 'freehand') {
+      setCurrentPoints(prev => [...prev, coords]);
+    }
   };
 
   const handleEnd = () => {
@@ -298,7 +356,20 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
     if (!isDrawing) return;
     setIsDrawing(false);
 
-    if (tool === 'line') {
+    if (tool === 'freehand') {
+      if (currentPoints.length > 0) {
+        setShapes(prev => [
+          ...prev,
+          {
+            type: 'freehand',
+            points: currentPoints,
+            color,
+            width: lineWidth,
+          },
+        ]);
+        setCurrentPoints([]);
+      }
+    } else if (tool === 'line') {
       const dist = Math.sqrt(Math.pow(currentPos.x - startPos.x, 2) + Math.pow(currentPos.y - startPos.y, 2));
       if (dist > 5) {
         setShapes([
@@ -396,13 +467,25 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
         <div className="flex gap-1 bg-slate-200/50 p-1 rounded-lg">
           <button
             type="button"
+            onClick={() => setTool('freehand')}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1 transition-all ${
+              tool === 'freehand' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-650 hover:text-slate-900'
+            }`}
+            title="ปากกาวาดอิสระ (Apple Pencil / นิ้วมือ)"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+            ปากกา
+          </button>
+          <button
+            type="button"
             onClick={() => setTool('line')}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1 transition-all ${
               tool === 'line' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-650 hover:text-slate-900'
             }`}
+            title="ลากเส้นตรงวัดระยะ"
           >
             <Edit3 className="w-3.5 h-3.5" />
-            เส้น
+            เส้นตรง
           </button>
           <button
             type="button"
@@ -410,6 +493,7 @@ export default function ImageAnnotation({ imageSrc, onSave, onCancel }: ImageAnn
             className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1 transition-all ${
               tool === 'circle' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-655 hover:text-slate-900'
             }`}
+            title="วาดวงกลม"
           >
             <Circle className="w-3.5 h-3.5" />
             วงกลม
